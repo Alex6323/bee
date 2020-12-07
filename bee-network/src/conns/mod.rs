@@ -101,20 +101,20 @@ fn spawn_substream_task(
         loop {
             select! {
                 message = fused_message_receiver.next() => {
-                    trace!("Outgoing message channel event.");
+                    println!("Outgoing message channel event.");
                     if let Some(message) = message {
                         if let Err(e) = send_message(&mut substream, &message).await {
                             error!("{:?}", e);
                             continue;
                         }
                     } else {
-                        trace!("Dropping connection");
+                        println!("Dropping connection");
                         break;
                     }
 
                 }
                 recv_result = recv_message(&mut substream, &mut buffer).fuse() => {
-                    trace!("Incoming substream event.");
+                    println!("Incoming substream event.");
                     match recv_result {
                         Ok(num_read) => {
                             if let Err(e) = process_read(peer_id.clone(), num_read, &mut internal_event_sender, &buffer).await
@@ -135,14 +135,14 @@ fn spawn_substream_task(
                             }
 
 
-                            trace!("Remote dropped connection.");
+                            println!("Remote dropped connection.");
                             break;
                         }
                     }
                 }
             }
         }
-        trace!("Shutting down connection handler task.");
+        println!("Shutting down connection handler task.");
     })
 }
 

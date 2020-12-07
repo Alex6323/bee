@@ -194,7 +194,7 @@ impl PeerList {
     }
 
     pub async fn clear(&self) {
-        trace!("Dropping message senders.");
+        println!("Dropping message senders.");
         self.0.write().await.clear();
     }
 }
