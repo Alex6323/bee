@@ -12,24 +12,24 @@ pub use list::*;
 pub use manager::*;
 
 // use futures::channel::mpsc;
-use tokio::sync::mpsc;
+// use tokio::sync::mpsc;
 
-// pub type DataSender = flume::r#async::SendSink<'static, Vec<u8>>;
-// pub type DataReceiver = flume::r#async::RecvStream<'static, Vec<u8>>;
+pub type DataSender = flume::r#async::SendSink<'static, Vec<u8>>;
+pub type DataReceiver = flume::r#async::RecvStream<'static, Vec<u8>>;
 
-pub type DataSender = mpsc::UnboundedSender<Vec<u8>>;
-pub type DataReceiver = mpsc::UnboundedReceiver<Vec<u8>>;
+// pub type DataSender = mpsc::UnboundedSender<Vec<u8>>;
+// pub type DataReceiver = mpsc::UnboundedReceiver<Vec<u8>>;
 
 pub fn channel() -> (DataSender, DataReceiver) {
     // flume:
-    // let (sender, receiver) = flume::unbounded();
-    // (sender.into_sink(), receiver.into_stream())
+    let (sender, receiver) = flume::unbounded();
+    (sender.into_sink(), receiver.into_stream())
 
     // futures:
     // mpsc::unbounded()
 
     // tokio:
-    mpsc::unbounded_channel()
+    // mpsc::unbounded_channel()
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

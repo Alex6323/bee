@@ -5,6 +5,7 @@ use crate::{Multiaddr, ShortId, KNOWN_PEER_LIMIT, UNKNOWN_PEER_LIMIT};
 
 use super::{errors::Error, DataSender, PeerRelation};
 
+use futures::SinkExt;
 use libp2p::PeerId;
 use log::trace;
 use tokio::sync::RwLock;
@@ -115,7 +116,7 @@ impl PeerList {
                 // .unbounded_send(message)
                 // NOTE: this has lifetime consequence for 'this'
                 // .send_async(message)
-                // .await
+                .await
                 .map_err(|_| Error::SendMessageFailure(to.short()))?;
 
             Ok(())
