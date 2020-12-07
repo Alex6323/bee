@@ -376,7 +376,7 @@ async fn process_internal_event(
             peers.update_state(&peer_id, PeerState::Disconnected).await?;
 
             // TODO: maybe allow some fixed timespan for a connection recovery from either end before removing.
-            peers.remove_if(&peer_id, |info, _| info.is_unknown());
+            peers.remove_if(&peer_id, |info, _| info.is_unknown()).await;
 
             event_sender
                 .send_async(Event::PeerDisconnected { id: peer_id })
