@@ -197,6 +197,7 @@ impl PeerList {
     }
 
     pub async fn clear(&self) {
+        println!("!!! CLEARING PEERLIST. ALL SENDERS WILL BE DROPPED !!!");
         self.0.write().await.clear();
     }
 }

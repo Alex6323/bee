@@ -92,7 +92,7 @@ pub(crate) async fn spawn_connection_handler(
 fn spawn_substream_task(
     peer_id: PeerId,
     mut substream: GossipSubstream,
-    mut message_receiver: DataReceiver,
+    message_receiver: DataReceiver,
     mut internal_event_sender: InternalEventSender,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
@@ -103,20 +103,20 @@ fn spawn_substream_task(
         loop {
             select! {
                 message = fused_message_receiver.next() => {
-                    info!("!!!! SEND MESSAGE !!!!");
+                    println!("!!!! SEND MESSAGE !!!!");
                     if let Some(message) = message {
                         if let Err(e) = send_message(&mut substream, &message).await {
                             error!("{:?}", e);
                             continue;
                         }
                     } else {
-                        debug!("!!! Message sender was deallocated. Shutting down this task. !!!");
+                        println!("!!! RECEIVER SHUT DOWN. EXITING TASK !!!");
                         break;
                     }
 
                 }
                 recv_result = recv_message(&mut substream, &mut buffer).fuse() => {
-                    info!("!!!! RECV MESSAGE !!!!");
+                    println!("!!!! RECV MESSAGE !!!!");
                     match recv_result {
                         Ok(num_read) => {
                             if let Err(e) = process_read(peer_id.clone(), num_read, &mut internal_event_sender, &buffer).await
@@ -138,14 +138,14 @@ fn spawn_substream_task(
                             }
 
 
-                            debug!("!!! Stream to remote stopped. Shutting down this task. !!!");
+                            println!("!!! REMOTE SHUT DOWN. EXITING TASK !!!");
                             break;
                         }
                     }
                 }
             }
         }
-        info!("!!!! Exiting possibly not always finishing tokio task !!!!");
+        println!("!!!! EXITING POSSIBLY NOT ALWAYS FINISHING TOKIO TASK !!!!");
     })
 }
 
