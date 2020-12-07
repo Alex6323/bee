@@ -117,7 +117,7 @@ impl<N: Node> Worker<N> for PeerManager {
             }
 
             // Clear the peer list; this will end all active connections.
-            peers_clone.clear().await;
+            peers_clone.clear();
 
             info!("Command processor stopped.");
         });
