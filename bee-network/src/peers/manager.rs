@@ -225,7 +225,7 @@ async fn process_command(
                     )
                     .await
                     {
-                        warn!("Failed to connect to peer. Cause: {:?}", e);
+                        warn!("Failed to connect to peer '{}'. Cause: {:?}", id.short(), e);
                     }
                 });
             } else {
@@ -255,7 +255,7 @@ async fn process_command(
                 )
                 .await
                 {
-                    warn!("Failed to connect to peer. Cause: {:?}", e);
+                    warn!("Failed to connect to peer '{}'. Cause: {:?}", id.short(), e);
                 }
             });
         }
@@ -282,7 +282,7 @@ async fn process_command(
                 )
                 .await
                 {
-                    warn!("Failed to connect to peer. Cause: {:?}", e);
+                    warn!("Failed to connect to peer by address. Cause: {:?}", e);
                 }
             });
         }
@@ -342,7 +342,7 @@ async fn process_internal_event(
             peer_info,
             gossip_in,
             gossip_out,
-            ..
+            origin,
         } => {
             match peer_info.relation {
                 PeerRelation::Known => peers.update_state(&peer_id, PeerState::Connected).await?,
@@ -362,6 +362,8 @@ async fn process_internal_event(
                 // Ignore 'PeerRelation::Discovered' case until autopeering has landed.
                 _ => (),
             }
+
+            info!("Established ({}) connection with '{}'.", origin, peer_info.alias);
 
             event_sender
                 .send(Event::PeerConnected {
@@ -407,7 +409,7 @@ async fn process_internal_event(
                 )
                 .await
                 {
-                    warn!("Failed to connect to peer. Cause: {:?}", e);
+                    warn!("Failed to connect to peer '{}'. Cause: {:?}", peer_id.short(), e);
                 }
             });
         }

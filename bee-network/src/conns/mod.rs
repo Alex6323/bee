@@ -22,7 +22,7 @@ use futures::{
     AsyncRead, AsyncWrite,
 };
 use libp2p::core::{
-    muxing::{event_from_ref_and_wrap, outbound_from_ref_and_wrap, StreamMuxerBox},
+    muxing::{event_from_ref_and_wrap, outbound_from_ref_and_wrap, StreamMuxerBox, StreamMuxerEvent},
     upgrade,
 };
 use log::*;
@@ -45,19 +45,35 @@ pub(crate) async fn upgrade_connection(
                 .await
                 .map_err(|_| Error::CreatingOutboundSubstreamFailed(peer_id.short()))?;
 
-            upgrade::apply_outbound(outbound, GossipProtocol, upgrade::Version::V1)
+            upgrade::apply_outbound(outbound, GossipProtocol, upgrade::Version::V1Lazy)
                 .await
                 .map_err(|_| Error::SubstreamProtocolUpgradeFailed(peer_id.short()))?
         }
         Origin::Inbound => {
             let inbound = loop {
-                if let Some(inbound) = event_from_ref_and_wrap(muxer.clone())
+                let e = event_from_ref_and_wrap(muxer.clone())
                     .await
-                    .map_err(|_| Error::CreatingInboundSubstreamFailed(peer_id.short()))?
-                    .into_inbound_substream()
-                {
-                    break inbound;
+                    .expect("EVENT_FROM_REF_AND_WRAP");
+
+                match e {
+                    //
+                    StreamMuxerEvent::InboundSubstream(inbound) => {
+                        println!("INBOUND SUBSTREAM");
+                        break inbound;
+                    }
+                    StreamMuxerEvent::AddressChange(address) => {
+                        println!("ADDRESS CHANGE: {:?}", address);
+                        return Err(Error::CreatingInboundSubstreamFailed("I'M DISSAPOINTED".to_string()));
+                    }
                 }
+
+                // if let Some(inbound) = event_from_ref_and_wrap(muxer.clone())
+                //     .await
+                //     .map_err(|_| Error::CreatingInboundSubstreamFailed(peer_id.short()))?
+                //     .into_inbound_substream()
+                // {
+                //     break inbound;
+                // }
             };
 
             upgrade::apply_inbound(inbound, GossipProtocol)

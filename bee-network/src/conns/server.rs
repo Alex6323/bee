@@ -175,7 +175,7 @@ impl<N: Node> Worker<N> for ConnectionManager {
                         }
                     };
 
-                    log_inbound_connection_success(&peer_info);
+                    // log_inbound_connection_success(&peer_info);
 
                     if let Err(e) = super::upgrade_connection(
                         peer_id.clone(),
@@ -225,10 +225,10 @@ impl<N: Node> Worker<N> for ConnectionManager {
     }
 
     async fn stop(self, _node: &mut N) -> Result<(), Self::Error> {
-        info!("Stopping spawned tasks...");
+        // info!("Stopping spawned tasks...");
         Ok(())
     }
 }
-fn log_inbound_connection_success(peer_info: &PeerInfo) {
-    info!("Established (inbound) connection with '{}'.", peer_info.alias);
-}
+// fn log_inbound_connection_success(peer_info: &PeerInfo) {
+//     info!("Established (inbound) connection with '{}'.", peer_info.alias);
+// }

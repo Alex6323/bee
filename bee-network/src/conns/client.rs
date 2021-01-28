@@ -69,7 +69,7 @@ pub async fn dial_peer(
 
     let peer_id = id;
 
-    log_outbound_connection_success(&peer_info);
+    // log_outbound_connection_success(&peer_info);
 
     super::upgrade_connection(
         peer_id,
@@ -148,7 +148,7 @@ pub async fn dial_address(
         peer_info
     };
 
-    log_outbound_connection_success(&peer_info);
+    // log_outbound_connection_success(&peer_info);
 
     super::upgrade_connection(
         peer_id,
@@ -162,6 +162,6 @@ pub async fn dial_address(
     Ok(())
 }
 
-fn log_outbound_connection_success(peer_info: &PeerInfo) {
-    info!("Established (outbound) connection with '{}'.", peer_info.alias);
-}
+// fn log_outbound_connection_success(peer_info: &PeerInfo) {
+//     info!("Established (outbound) connection with '{}'.", peer_info.alias);
+// }
