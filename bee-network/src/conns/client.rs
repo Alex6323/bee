@@ -50,7 +50,7 @@ pub async fn dial_peer(
         return Err(Error::DialedBannedAddress(peer_info.address));
     }
 
-    log_dialing_peer(&peer_info);
+    log_dialing_peer(&peer_id, &peer_info);
 
     let (id, muxer) = build_transport(local_keys)
         .map_err(|_| Error::CreatingTransportFailed)?
@@ -83,8 +83,8 @@ pub async fn dial_peer(
     Ok(())
 }
 
-fn log_dialing_peer(peer_info: &PeerInfo) {
-    info!("Dialing {}...", peer_info.alias);
+fn log_dialing_peer(peer_id: &PeerId, peer_info: &PeerInfo) {
+    info!("Dialing {}:{} ...", peer_info.alias, peer_id.short());
 }
 
 pub async fn dial_address(
@@ -105,7 +105,7 @@ pub async fn dial_address(
         return Err(Error::DialedBannedAddress(address.clone()));
     }
 
-    info!("Dialing...");
+    info!("Dialing {} ...", address);
 
     let (peer_id, muxer) = build_transport(local_keys)
         .map_err(|_| Error::CreatingTransportFailed)?
