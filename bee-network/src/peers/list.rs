@@ -78,10 +78,6 @@ impl PeerList {
             // TODO: Handle 'PeerRelation::Discovered' case once autopeering has landed.
             _ => (),
         }
-        if self.0.read().await.contains_key(id) {
-            let alias = info.alias.clone();
-            return Err(Error::PeerAlreadyAdded(alias));
-        }
 
         Ok(())
     }
