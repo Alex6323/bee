@@ -2,6 +2,7 @@
 members = [
 	"bee-api/bee-rest-api",
 	"bee-ledger",
+	"bee-network",
 	"bee-node",
 	"bee-protocol",
 	"bee-storage/bee-storage-rocksdb",
