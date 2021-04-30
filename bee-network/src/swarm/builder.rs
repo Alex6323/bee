@@ -51,7 +51,8 @@ pub fn build_swarm(
         dns_config
             .upgrade(upgrade::Version::V1)
             .authenticate(noi_config.into_authenticated())
-            .multiplex(SelectUpgrade::new(ymx_config, mpx_config))
+            // .multiplex(SelectUpgrade::new(ymx_config, mpx_config))
+            .multiplex(mpx_config)
             .timeout(Duration::from_secs(DEFAULT_CONNECTION_TIMEOUT_SECS))
             .boxed()
     };
