@@ -5,7 +5,7 @@ use crate::network::meta::ConnectionInfo;
 
 use libp2p::{swarm::NegotiatedSubstream, Multiaddr, PeerId};
 
-pub struct GossipEvent {
+pub struct GossipConnection {
     pub peer_id: PeerId,
     pub peer_multiaddr: Multiaddr,
     pub connection_info: ConnectionInfo,
@@ -13,14 +13,14 @@ pub struct GossipEvent {
 }
 
 #[derive(Default)]
-pub struct GossipEventBuilder {
+pub struct GossipConnectionBuilder {
     peer_id: Option<PeerId>,
     peer_addr: Option<Multiaddr>,
     connection_info: Option<ConnectionInfo>,
     negotiated_stream: Option<NegotiatedSubstream>,
 }
 
-impl GossipEventBuilder {
+impl GossipConnectionBuilder {
     pub fn with_peer_id(mut self, peer_id: PeerId) -> Self {
         self.peer_id.replace(peer_id);
         self
@@ -41,11 +41,11 @@ impl GossipEventBuilder {
         self
     }
 
-    pub fn finish(self) -> GossipEvent {
+    pub fn finish(self) -> GossipConnection {
         // Panic:
         // Due to the design it is guaranteed that when this method is called all options have been replaced with valid
         // values. Unwrapping is therefore fine at this point.
-        GossipEvent {
+        GossipConnection {
             // The following 3 fields are received during `inject_connection_established` which is invoked before
             // `inject_event`.
             peer_id: self.peer_id.unwrap(),

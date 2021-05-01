@@ -1,7 +1,7 @@
 // Copyright 2020-2021 IOTA Stiftung
 // SPDX-License-Identifier: Apache-2.0
 
-use super::protocols::gossip::{self, behavior::Gossip, event::GossipEvent};
+use super::protocols::gossip::{self, connection::GossipConnection, protocol::GossipProtocol};
 
 use crate::{
     alias,
@@ -22,7 +22,7 @@ const IOTA_PROTOCOL_VERSION: &str = "iota/0.1.0";
 #[derive(NetworkBehaviour)]
 pub struct SwarmBehavior {
     identify: Identify,
-    gossip: Gossip,
+    gossip: GossipProtocol,
     #[behaviour(ignore)]
     internal_sender: InternalEventSender,
 }
@@ -34,7 +34,7 @@ impl SwarmBehavior {
 
         Self {
             identify: Identify::new(config),
-            gossip: Gossip::new(),
+            gossip: GossipProtocol::new(),
             internal_sender,
         }
     }
@@ -65,11 +65,11 @@ impl NetworkBehaviourEventProcess<IdentifyEvent> for SwarmBehavior {
     }
 }
 
-impl NetworkBehaviourEventProcess<GossipEvent> for SwarmBehavior {
-    fn inject_event(&mut self, event: GossipEvent) {
+impl NetworkBehaviourEventProcess<GossipConnection> for SwarmBehavior {
+    fn inject_event(&mut self, event: GossipConnection) {
         trace!("Behavior received gossip event.");
 
-        let GossipEvent {
+        let GossipConnection {
             peer_id,
             peer_multiaddr: peer_addr,
             negotiated_stream: conn,

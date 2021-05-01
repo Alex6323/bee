@@ -10,7 +10,7 @@ use crate::{
         command::{Command, CommandReceiver},
         event::{InternalEvent, InternalEventSender},
     },
-    swarm::{behavior::SwarmBehavior, protocols::gossip::behavior::GOSSIP_ORIGIN},
+    swarm::{behavior::SwarmBehavior, protocols::gossip::protocol::GOSSIP_ORIGIN},
 };
 
 use futures::channel::oneshot;

@@ -1,7 +1,7 @@
 // Copyright 2020-2021 IOTA Stiftung
 // SPDX-License-Identifier: Apache-2.0
 
-use super::upgrade::GossipUpgrade;
+use super::upgrade::GossipProtocolUpgrade;
 
 use crate::network::meta::Origin;
 
@@ -16,13 +16,13 @@ use log::trace;
 
 use std::{io, task::Poll};
 
-pub struct GossipHandler {
+pub struct GossipProtocolHandler {
     origin: Origin,
     stream: Option<NegotiatedSubstream>,
     sent_request: bool,
 }
 
-impl GossipHandler {
+impl GossipProtocolHandler {
     pub fn new(origin: Origin) -> Self {
         Self {
             origin,
@@ -32,17 +32,17 @@ impl GossipHandler {
     }
 }
 
-impl ProtocolsHandler for GossipHandler {
+impl ProtocolsHandler for GossipProtocolHandler {
     type InEvent = Origin;
     type OutEvent = NegotiatedSubstream;
     type Error = io::Error;
-    type InboundProtocol = GossipUpgrade;
-    type OutboundProtocol = GossipUpgrade;
+    type InboundProtocol = GossipProtocolUpgrade;
+    type OutboundProtocol = GossipProtocolUpgrade;
     type InboundOpenInfo = ();
     type OutboundOpenInfo = ();
 
     fn listen_protocol(&self) -> SubstreamProtocol<Self::InboundProtocol, Self::InboundOpenInfo> {
-        SubstreamProtocol::new(GossipUpgrade::default(), ())
+        SubstreamProtocol::new(GossipProtocolUpgrade::default(), ())
     }
 
     // Yields the `NegotiatedSubstream` for an inbound connection.
@@ -92,7 +92,7 @@ impl ProtocolsHandler for GossipHandler {
             self.sent_request = true;
 
             let request_sent_event = ProtocolsHandlerEvent::OutboundSubstreamRequest {
-                protocol: SubstreamProtocol::new(GossipUpgrade::default(), ()),
+                protocol: SubstreamProtocol::new(GossipProtocolUpgrade::default(), ()),
             };
 
             trace!("gossip handler: protocol request sent.");

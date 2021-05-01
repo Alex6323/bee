@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{
-    event::{GossipEvent, GossipEventBuilder},
-    handler::GossipHandler,
+    connection::{GossipConnection, GossipConnectionBuilder},
+    handler::GossipProtocolHandler,
 };
 
 use crate::{
@@ -34,25 +34,25 @@ use std::{
 // has to issue the protocol request, while the dialed one has to respond.
 pub static GOSSIP_ORIGIN: AtomicBool = AtomicBool::new(false);
 
-#[derive(Eq, PartialEq, Hash, Debug, Clone, Copy)]
-struct Id(PeerId, ConnectionId);
+// #[derive(Eq, PartialEq, Hash, Debug, Clone, Copy)]
+// struct Id(PeerId, ConnectionId);
 
 #[derive(Default)]
-pub struct Gossip {
-    builders: HashMap<PeerId, GossipEventBuilder>,
+pub struct GossipProtocol {
+    builders: HashMap<PeerId, GossipConnectionBuilder>,
     // events produced by gossip handlers
-    events: VecDeque<GossipEvent>,
+    events: VecDeque<GossipConnection>,
 }
 
-impl Gossip {
+impl GossipProtocol {
     pub fn new() -> Self {
         Self::default()
     }
 }
 
-impl NetworkBehaviour for Gossip {
-    type ProtocolsHandler = GossipHandler;
-    type OutEvent = GossipEvent;
+impl NetworkBehaviour for GossipProtocol {
+    type ProtocolsHandler = GossipProtocolHandler;
+    type OutEvent = GossipConnection;
 
     fn new_handler(&mut self) -> Self::ProtocolsHandler {
         // See FIXME above!
@@ -63,7 +63,7 @@ impl NetworkBehaviour for Gossip {
         };
 
         trace!("gossip behavior: new_handler: {}", origin);
-        GossipHandler::new(origin)
+        GossipProtocolHandler::new(origin)
     }
 
     // This event provides the `PeerId`, `Multiaddr`, and `Origin`.
@@ -73,7 +73,7 @@ impl NetworkBehaviour for Gossip {
             ConnectedPoint::Listener { send_back_addr, .. } => (send_back_addr.clone(), Origin::Inbound),
         };
 
-        let builder = GossipEventBuilder::default()
+        let builder = GossipConnectionBuilder::default()
             .with_peer_id(*peer_id)
             .with_peer_addr(mutiaddr)
             .with_conn_info(ConnectionInfo { origin });

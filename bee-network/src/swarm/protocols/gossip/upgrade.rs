@@ -14,9 +14,9 @@ const PROTOCOL_INFO_VERSION: &str = "1.0.0";
 
 /// Configuration for an upgrade to the `IotaGossip` protocol.
 #[derive(Debug, Clone, Default)]
-pub struct GossipUpgrade;
+pub struct GossipProtocolUpgrade;
 
-impl UpgradeInfo for GossipUpgrade {
+impl UpgradeInfo for GossipProtocolUpgrade {
     type Info = Vec<u8>;
     type InfoIter = iter::Once<Self::Info>;
 
@@ -33,7 +33,7 @@ impl UpgradeInfo for GossipUpgrade {
     }
 }
 
-impl<C> InboundUpgrade<C> for GossipUpgrade
+impl<C> InboundUpgrade<C> for GossipProtocolUpgrade
 where
     C: AsyncRead + AsyncWrite + Unpin,
 {
@@ -49,7 +49,7 @@ where
     }
 }
 
-impl<C> OutboundUpgrade<C> for GossipUpgrade
+impl<C> OutboundUpgrade<C> for GossipProtocolUpgrade
 where
     C: AsyncRead + AsyncWrite + Unpin + Send + 'static,
 {
