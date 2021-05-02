@@ -73,7 +73,7 @@ impl GossipProtocolHandler {
     pub fn new(inbound_index: usize, outbound_index: usize, info: IotaGossipInfo) -> Self {
         Self {
             info,
-            keep_alive: KeepAlive::Until(Instant::now() + KEEP_ALIVE_UNTIL),
+            keep_alive: KeepAlive::Yes, // KeepAlive::Until(Instant::now() + KEEP_ALIVE_UNTIL),
             inbound_index,
             outbound_index,
             in_events: VecDeque::with_capacity(16),
@@ -147,7 +147,7 @@ impl ProtocolsHandler for GossipProtocolHandler {
     }
 
     fn connection_keep_alive(&self) -> KeepAlive {
-        debug!("IOTA gossip handler: return KeepAlive variant.");
+        // debug!("IOTA gossip handler: return KeepAlive variant.");
 
         self.keep_alive
     }
