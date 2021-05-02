@@ -8,7 +8,7 @@ use super::{
     meta::{PeerInfo, PeerRelation},
 };
 
-use crate::{alias, config::Peer, init::global::max_unknown_peers, swarm::protocols::gossip::io::GossipSender};
+use crate::{alias, config::Peer, init::global::max_unknown_peers, swarm::protocols::iota_gossip::GossipSender};
 
 use hashbrown::{HashMap, HashSet};
 use libp2p::{Multiaddr, PeerId};

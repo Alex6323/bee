@@ -10,7 +10,7 @@ use crate::{
         command::{Command, CommandReceiver},
         event::{InternalEvent, InternalEventSender},
     },
-    swarm::{behavior::SwarmBehavior, protocols::gossip::protocol::GOSSIP_ORIGIN},
+    swarm::behavior::SwarmBehavior,
 };
 
 use futures::channel::oneshot;
@@ -181,8 +181,6 @@ async fn dial_addr(swarm: &mut Swarm<SwarmBehavior>, addr: Multiaddr, peerlist: 
 
     info!("Dialing address: {}.", addr);
 
-    GOSSIP_ORIGIN.store(true, std::sync::atomic::Ordering::SeqCst);
-
     Swarm::dial_addr(swarm, addr.clone()).map_err(|_| Error::DialingAddressFailed(addr))?;
 
     Ok(())
@@ -199,8 +197,6 @@ async fn dial_peer(swarm: &mut Swarm<SwarmBehavior>, peer_id: PeerId, peerlist: 
     let PeerInfo { address, alias, .. } = peerlist.0.read().await.info(&peer_id).unwrap();
 
     info!("Dialing peer: {} ({}).", alias, alias!(peer_id));
-
-    GOSSIP_ORIGIN.store(true, std::sync::atomic::Ordering::SeqCst);
 
     Swarm::dial_addr(swarm, address).map_err(|_| Error::DialingPeerFailed(peer_id))?;
 

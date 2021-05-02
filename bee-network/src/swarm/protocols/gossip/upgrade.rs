@@ -1,5 +1,6 @@
 // Copyright 2020-2021 IOTA Stiftung
 // SPDX-License-Identifier: Apache-2.0
+use super::{PROTOCOL_INFO_IOTA_GOSSIP, PROTOCOL_INFO_VERSION};
 
 use crate::init::global::network_id;
 
@@ -8,9 +9,6 @@ use libp2p::{core::UpgradeInfo, InboundUpgrade, OutboundUpgrade};
 use log::trace;
 
 use std::iter;
-
-const PROTOCOL_INFO_IOTA_GOSSIP: &str = "iota-gossip";
-const PROTOCOL_INFO_VERSION: &str = "1.0.0";
 
 /// Configuration for an upgrade to the `IotaGossip` protocol.
 #[derive(Debug, Clone, Default)]

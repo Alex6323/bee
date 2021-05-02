@@ -6,7 +6,7 @@ use super::command::Command;
 use crate::{
     network::meta::ConnectionInfo,
     peer::{error::Error as PeerError, meta::PeerInfo},
-    swarm::protocols::gossip::io::{GossipReceiver, GossipSender},
+    swarm::protocols::iota_gossip::{GossipReceiver, GossipSender},
 };
 
 use libp2p::{Multiaddr, PeerId};

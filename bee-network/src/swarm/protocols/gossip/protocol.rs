@@ -34,9 +34,6 @@ use std::{
 // has to issue the protocol request, while the dialed one has to respond.
 pub static GOSSIP_ORIGIN: AtomicBool = AtomicBool::new(false);
 
-// #[derive(Eq, PartialEq, Hash, Debug, Clone, Copy)]
-// struct Id(PeerId, ConnectionId);
-
 #[derive(Default)]
 pub struct GossipProtocol {
     builders: HashMap<PeerId, GossipConnectionBuilder>,

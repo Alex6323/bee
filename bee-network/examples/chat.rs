@@ -37,7 +37,7 @@ async fn main() {
     use tokio_stream::StreamExt;
 
     fern::Dispatch::new()
-        .level(log::LevelFilter::Info)
+        .level(log::LevelFilter::Debug)
         .chain(std::io::stdout())
         .apply()
         .expect("fern");
