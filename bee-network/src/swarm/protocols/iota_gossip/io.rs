@@ -100,7 +100,8 @@ pub fn spawn_outgoing_gossip_processor(
             }
 
             // If sending to the stream fails we end the connection.
-            if (&mut writer).write_all(&message).await.is_err() || (&mut writer).flush().await.is_err() {
+            // if (&mut writer).write_all(&message).await.is_err() || (&mut writer).flush().await.is_err() {
+            if (&mut writer).write_all(&message).await.is_err() {
                 debug!("gossip-out: stream closed remotely");
                 break;
             }
