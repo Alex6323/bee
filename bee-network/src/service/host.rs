@@ -208,8 +208,13 @@ async fn peerstate_checker(shutdown: Shutdown, senders: Senders, peerlist: PeerL
     while interval.next().await.is_some() {
         let peerlist = peerlist.0.read().await;
 
+        let num_connected = peerlist.filter_count(|_, state| state.is_connected());
+        let num_peers = peerlist.len();
+
+        info!("Peers connected: {}/{}", num_connected, num_peers);
+
         for (peer_id, alias) in peerlist.filter(|info, state| info.relation.is_known() && state.is_disconnected()) {
-            info!("Trying to reconnect to: {} ({}).", alias, alias!(peer_id));
+            info!("Trying to connect to: {} ({}).", alias, alias!(peer_id));
 
             // Ignore if the command fails. We can always retry the next time.
             let _ = internal_commands.send(Command::DialPeer { peer_id });
@@ -232,14 +237,6 @@ async fn process_command(command: Command, senders: &Senders, peerlist: &PeerLis
             let alias = alias.unwrap_or_else(|| alias!(peer_id).to_string());
 
             add_peer(peer_id, multiaddr, alias, relation, senders, peerlist).await?;
-
-            // // Automatically connect to "known" peers.
-            // if relation.is_known() {
-            //     senders
-            //         .internal_commands
-            //         .send(Command::DialPeer { peer_id })
-            //         .map_err(|_| Error::SendingCommandFailed)?;
-            // }
         }
 
         Command::BanAddress { address } => {
