@@ -233,13 +233,13 @@ async fn process_command(command: Command, senders: &Senders, peerlist: &PeerLis
 
             add_peer(peer_id, multiaddr, alias, relation, senders, peerlist).await?;
 
-            // Automatically connect to "known" peers.
-            if relation.is_known() {
-                senders
-                    .internal_commands
-                    .send(Command::DialPeer { peer_id })
-                    .map_err(|_| Error::SendingCommandFailed)?;
-            }
+            // // Automatically connect to "known" peers.
+            // if relation.is_known() {
+            //     senders
+            //         .internal_commands
+            //         .send(Command::DialPeer { peer_id })
+            //         .map_err(|_| Error::SendingCommandFailed)?;
+            // }
         }
 
         Command::BanAddress { address } => {
