@@ -40,6 +40,7 @@ pub struct GossipProtocolHandler {
     ///
     outbound_index: usize,
 
+    // TODO: combine in and out events
     ///
     in_events: VecDeque<IotaGossipHandlerInEvent>,
 
@@ -97,13 +98,13 @@ impl ProtocolsHandler for GossipProtocolHandler {
     type OutboundOpenInfo = usize;
 
     fn listen_protocol(&self) -> SubstreamProtocol<Self::InboundProtocol, Self::InboundOpenInfo> {
-        debug!("IOTA gossip handler: get listen protocol: {}", self.inbound_index);
+        debug!("gossip handler: get listen protocol: {}", self.inbound_index);
 
         SubstreamProtocol::new(IotaGossipProtocolUpgrade::new(self.info.clone()), self.inbound_index)
     }
 
     fn inject_event(&mut self, in_event: IotaGossipHandlerInEvent) {
-        debug!("IOTA gossip handler: received in-event: {:?}", in_event);
+        debug!("gossip handler: received in-event: {:?}", in_event);
 
         self.in_events.push_back(in_event);
     }
@@ -113,7 +114,7 @@ impl ProtocolsHandler for GossipProtocolHandler {
         new_inbound: NegotiatedSubstream,
         inbound_index: Self::InboundOpenInfo,
     ) {
-        debug!("IOTA gossip handler: fully negotiated inbound: {}", inbound_index);
+        debug!("gossip handler: fully negotiated inbound: {}", inbound_index);
 
         if self.inbound.is_none() {
             self.inbound.replace(new_inbound);
@@ -127,7 +128,7 @@ impl ProtocolsHandler for GossipProtocolHandler {
         new_outbound: NegotiatedSubstream,
         outbound_index: Self::OutboundOpenInfo,
     ) {
-        debug!("IOTA gossip handler: fully negotiated outbound: {}", outbound_index);
+        debug!("gossip handler: fully negotiated outbound: {}", outbound_index);
 
         if self.outbound.is_none() {
             self.outbound.replace(new_outbound);
@@ -141,13 +142,13 @@ impl ProtocolsHandler for GossipProtocolHandler {
         outbound_index: Self::OutboundOpenInfo,
         e: ProtocolsHandlerUpgrErr<<Self::OutboundProtocol as OutboundUpgrade<NegotiatedSubstream>>::Error>,
     ) {
-        debug!("IOTA gossip handler: outbound upgrade error: {:?}", e);
+        debug!("gossip handler: outbound upgrade error: {:?}", e);
 
         self.errors.push_back((outbound_index, e));
     }
 
     fn connection_keep_alive(&self) -> KeepAlive {
-        // debug!("IOTA gossip handler: return KeepAlive variant.");
+        // debug!("gossip handler: return KeepAlive variant.");
 
         self.keep_alive
     }
@@ -158,7 +159,7 @@ impl ProtocolsHandler for GossipProtocolHandler {
         _: &mut Context<'_>,
     ) -> Poll<ProtocolsHandlerEvent<Self::OutboundProtocol, Self::OutboundOpenInfo, Self::OutEvent, Self::Error>> {
         // Process swarm updates.
-        while let Some(in_event) = self.in_events.pop_front() {
+        if let Some(in_event) = self.in_events.pop_front() {
             let IotaGossipHandlerInEvent {
                 peer_id,
                 peer_addr,
@@ -179,11 +180,11 @@ impl ProtocolsHandler for GossipProtocolHandler {
                     ),
                 };
 
-                debug!("IOTA gossip handler: protocol upgrade request sent.");
+                debug!("gossip handler: protocol upgrade request sent.");
 
                 return Poll::Ready(request_sent_event);
             } else {
-                debug!("IOTA gossip handler: waiting for protocol upgrade request.");
+                debug!("gossip handler: waiting for protocol upgrade request.");
 
                 let waiting_for_request =
                     ProtocolsHandlerEvent::Custom(IotaGossipHandlerEvent::AwaitingUpgradeRequest { from: peer_id });
@@ -193,7 +194,7 @@ impl ProtocolsHandler for GossipProtocolHandler {
         }
 
         if let Some(inbound) = self.inbound.take() {
-            debug!("IOTA gossip handler: negotiated new inbound stream.");
+            debug!("gossip handler: negotiated new inbound stream.");
 
             return Poll::Ready(ProtocolsHandlerEvent::Custom(
                 IotaGossipHandlerEvent::UpgradeCompleted {
@@ -204,7 +205,7 @@ impl ProtocolsHandler for GossipProtocolHandler {
                 },
             ));
         } else if let Some(outbound) = self.outbound.take() {
-            debug!("IOTA gossip handler: negotiated new outbound stream.");
+            debug!("gossip handler: negotiated new outbound stream.");
 
             return Poll::Ready(ProtocolsHandlerEvent::Custom(
                 IotaGossipHandlerEvent::UpgradeCompleted {

@@ -14,10 +14,10 @@ use libp2p::{
     swarm::{NetworkBehaviour, NetworkBehaviourAction, NotifyHandler, PollParameters},
     Multiaddr, PeerId,
 };
-use log::trace;
+use log::debug;
 
 use std::{
-    collections::VecDeque,
+    collections::{HashMap, VecDeque},
     task::{Context, Poll},
 };
 
@@ -25,18 +25,24 @@ const IOTA_GOSSIP_NAME: &str = "iota-gossip";
 const IOTA_GOSSIP_VERSION: &str = "1.0.0";
 
 /// Substream upgrade protocol for `/iota-gossip/1.0.0`.
-#[derive(Debug)]
 pub struct IotaGossipProtocol {
     info: IotaGossipInfo,
     num_handlers: usize,
     num_inbounds: usize,
     num_outbounds: usize,
 
-    /// Events produced by the underlying swarm.
-    swarm_events: VecDeque<SwarmEvent>,
+    /// Events produced for the behavior and handlers.
+    events: VecDeque<NetworkBehaviourAction<IotaGossipHandlerInEvent, IotaGossipEvent>>,
 
-    /// Events produced by the protocol handler.
-    handler_events: VecDeque<HandlerEvent>,
+    /// Maps addresses to peers.
+    /// TODO: support peers having multiple addresses
+    peer_addrs: HashMap<PeerId, ConnectionInfo>,
+}
+
+struct ConnectionInfo {
+    id: ConnectionId,
+    addr: Multiaddr,
+    origin: Origin,
 }
 
 #[derive(Debug)]
@@ -61,8 +67,38 @@ impl IotaGossipProtocol {
             num_handlers: 0,
             num_inbounds: 0,
             num_outbounds: 0,
-            swarm_events: VecDeque::with_capacity(16),
-            handler_events: VecDeque::with_capacity(16),
+            events: VecDeque::with_capacity(16),
+            peer_addrs: HashMap::with_capacity(8),
+        }
+    }
+
+    pub fn contains(&self, peer_id: &PeerId) -> bool {
+        self.peer_addrs.contains_key(peer_id)
+    }
+
+    pub fn remove(&mut self, peer_id: &PeerId) {
+        self.peer_addrs.remove(peer_id);
+    }
+
+    pub fn renegotiate(&mut self, peer_id: &PeerId) {
+        self.add_handler_event(peer_id);
+    }
+
+    fn add_handler_event(&mut self, peer_id: &PeerId) {
+        if let Some(conn_info) = self.peer_addrs.get(peer_id) {
+            let handler_event = IotaGossipHandlerInEvent {
+                peer_id: *peer_id,
+                peer_addr: conn_info.addr.clone(),
+                conn_origin: conn_info.origin.clone(),
+            };
+
+            let notify_handler = NetworkBehaviourAction::NotifyHandler {
+                peer_id: *peer_id,
+                handler: NotifyHandler::One(conn_info.id), // TODO: try also ::Any
+                event: handler_event,
+            };
+
+            self.events.push_back(notify_handler);
         }
     }
 }
@@ -71,19 +107,51 @@ impl NetworkBehaviour for IotaGossipProtocol {
     type ProtocolsHandler = GossipProtocolHandler;
     type OutEvent = IotaGossipEvent;
 
-    // Order of events:
-    // (1) new_handler
-    // (2) inject_connection_established
-    // (3) inject_connected
-
+    /// **libp2p docs**:
+    ///
+    /// Creates a new `ProtocolsHandler` for a connection with a peer.
+    ///
+    /// Every time an incoming connection is opened, and every time we start dialing a node, this
+    /// method is called.
+    ///
+    /// The returned object is a handler for that specific connection, and will be moved to a
+    /// background task dedicated to that connection.
+    ///
+    /// The network behaviour (ie. the implementation of this trait) and the handlers it has
+    /// spawned (ie. the objects returned by `new_handler`) can communicate by passing messages.
+    /// Messages sent from the handler to the behaviour are injected with `inject_event`, and
+    /// the behaviour can send a message to the handler by making `poll` return `SendEvent`.
     fn new_handler(&mut self) -> Self::ProtocolsHandler {
-        trace!("IOTA gossip protocol: new handler.");
+        debug!("gossip protocol: new handler.");
 
         self.num_handlers += 1;
+        debug!("gossip protocol: new handler ({}).", self.num_handlers);
 
         GossipProtocolHandler::new(self.num_inbounds, self.num_outbounds, self.info.clone())
     }
 
+    /// **libp2p docs**:
+    ///
+    /// Addresses that this behaviour is aware of for this specific peer, and that may allow
+    /// reaching the peer.
+    ///
+    /// The addresses will be tried in the order returned by this function, which means that they
+    /// should be ordered by decreasing likelihood of reachability. In other words, the first
+    /// address should be the most likely to be reachable.
+    fn addresses_of_peer(&mut self, peer_id: &PeerId) -> Vec<Multiaddr> {
+        let addrs = self
+            .peer_addrs
+            .get(&peer_id)
+            .map_or(Vec::new(), |conn_info| vec![conn_info.addr.clone()]);
+
+        debug!("gossip protocol: addresses of peer {}: {:?}.", alias!(peer_id), addrs);
+
+        addrs
+    }
+
+    /// **libp2p docs**:
+    ///
+    /// Informs the behaviour about a newly established connection to a peer.
     fn inject_connection_established(&mut self, peer_id: &PeerId, conn_id: &ConnectionId, endpoint: &ConnectedPoint) {
         let (peer_addr, origin) = match endpoint {
             ConnectedPoint::Dialer { address } => (address.clone(), Origin::Outbound),
@@ -94,33 +162,102 @@ impl NetworkBehaviour for IotaGossipProtocol {
             Origin::Inbound => self.num_inbounds += 1,
             Origin::Outbound => self.num_outbounds += 1,
         }
+        debug!(
+            "gossip protocol: connection established: inbound/outbound: {}/{}",
+            self.num_inbounds, self.num_outbounds
+        );
 
-        let event = SwarmEvent {
-            peer_id: *peer_id,
-            peer_addr,
-            conn_id: *conn_id,
+        let conn_info = ConnectionInfo {
+            id: *conn_id,
+            addr: peer_addr,
             origin,
         };
+        self.peer_addrs.insert(*peer_id, conn_info);
 
-        trace!("IOTA gossip protocol: swarm event: {:?}", event);
-
-        self.swarm_events.push_back(event);
+        self.add_handler_event(peer_id);
     }
 
+    /// **libp2p docs**:
+    ///
+    /// Indicate to the behaviour that we connected to the node with the given peer id.
+    ///
+    /// This node now has a handler (as spawned by `new_handler`) running in the background.
+    ///
+    /// This method is only called when the first connection to the peer is established, preceded by
+    /// [`inject_connection_established`](NetworkBehaviour::inject_connection_established).
     fn inject_connected(&mut self, peer_id: &PeerId) {
-        trace!("IOTA gossip protocol: {} connected.", alias!(peer_id));
+        debug!("gossip protocol: {} connected.", alias!(peer_id));
     }
 
+    /// **libp2p docs**:
+    ///
+    /// Informs the behaviour about an event generated by the handler dedicated to the peer identified by `peer_id`.
+    /// for the behaviour.
+    ///
+    /// The `peer_id` is guaranteed to be in a connected state. In other words, `inject_connected`
+    /// has previously been called with this `PeerId`.
     fn inject_event(&mut self, peer_id: PeerId, conn_id: ConnectionId, event: IotaGossipHandlerEvent) {
-        let event = HandlerEvent {
-            peer_id,
-            conn_id,
-            event,
+        debug!("gossip protocol: handler event: {:?}", event);
+
+        let ev = match event {
+            IotaGossipHandlerEvent::SentUpgradeRequest { to } => {
+                NetworkBehaviourAction::GenerateEvent(IotaGossipEvent::SentUpgradeRequest { to })
+            }
+            IotaGossipHandlerEvent::UpgradeCompleted {
+                peer_id,
+                peer_addr,
+                conn_origin,
+                substream,
+            } => NetworkBehaviourAction::GenerateEvent(IotaGossipEvent::UpgradeCompleted {
+                peer_id,
+                peer_addr,
+                conn_origin,
+                substream,
+            }),
+            IotaGossipHandlerEvent::UpgradeError { peer_id, error } => {
+                NetworkBehaviourAction::GenerateEvent(IotaGossipEvent::UpgradeError { peer_id, error })
+            }
+            _ => return,
         };
 
-        trace!("IOTA gossip protocol: handler event: {:?}", event);
+        self.events.push_back(ev);
+    }
 
-        self.handler_events.push_back(event);
+    /// **libp2p docs**:
+    ///
+    /// Informs the behaviour about a closed connection to a peer.
+    ///
+    /// A call to this method is always paired with an earlier call to
+    /// `inject_connection_established` with the same peer ID, connection ID and
+    /// endpoint.
+    fn inject_connection_closed(&mut self, peer_id: &PeerId, _: &ConnectionId, _: &ConnectedPoint) {
+        debug!("gossip behavior: connection with {} closed.", alias!(peer_id));
+    }
+
+    /// **libp2p docs**:
+    ///
+    /// Indicates to the behaviour that we disconnected from the node with the given peer id.
+    ///
+    /// There is no handler running anymore for this node. Any event that has been sent to it may
+    /// or may not have been processed by the handler.
+    ///
+    /// This method is only called when the last established connection to the peer is closed,
+    /// preceded by [`inject_connection_closed`](NetworkBehaviour::inject_connection_closed).
+    fn inject_disconnected(&mut self, peer_id: &PeerId) {
+        debug!("gossip behavior: {} disconnected.", alias!(peer_id));
+    }
+
+    /// **libp2p docs**:
+    ///
+    /// Informs the behaviour that the [`ConnectedPoint`] of an existing connection has changed.
+    fn inject_address_change(
+        &mut self,
+        peer_id: &PeerId,
+        _: &ConnectionId,
+        _old: &ConnectedPoint,
+        _new: &ConnectedPoint,
+    ) {
+        debug!("gossip behavior: address of {} changed.", alias!(peer_id));
     }
 
     fn poll(
@@ -128,86 +265,10 @@ impl NetworkBehaviour for IotaGossipProtocol {
         _: &mut Context<'_>,
         _: &mut impl PollParameters,
     ) -> Poll<NetworkBehaviourAction<IotaGossipHandlerInEvent, Self::OutEvent>> {
-        // Update the gossip handler with new information.
-        while let Some(event) = self.swarm_events.pop_front() {
-            let SwarmEvent {
-                peer_id,
-                peer_addr,
-                conn_id,
-                origin,
-            } = event;
-
-            let notify_handler = NetworkBehaviourAction::NotifyHandler {
-                peer_id,
-                handler: NotifyHandler::One(conn_id),
-                event: IotaGossipHandlerInEvent {
-                    peer_id,
-                    peer_addr,
-                    conn_origin: origin,
-                },
-            };
-
-            return Poll::Ready(notify_handler);
+        if let Some(event) = self.events.pop_front() {
+            Poll::Ready(event)
+        } else {
+            Poll::Pending
         }
-
-        // Process handler events.
-        while let Some(event) = self.handler_events.pop_front() {
-            let HandlerEvent {
-                peer_id: _,
-                conn_id: _,
-                event,
-            } = event;
-
-            match event {
-                IotaGossipHandlerEvent::AwaitingUpgradeRequest { from: _ } => {
-                    // TODO
-                }
-
-                IotaGossipHandlerEvent::ReceivedUpgradeRequest { from: _ } => {
-                    // TODO
-                }
-
-                IotaGossipHandlerEvent::SentUpgradeRequest { to } => {
-                    let notify_swarm =
-                        NetworkBehaviourAction::GenerateEvent(IotaGossipEvent::SentUpgradeRequest { to });
-
-                    return Poll::Ready(notify_swarm);
-                }
-
-                IotaGossipHandlerEvent::UpgradeCompleted {
-                    peer_id,
-                    peer_addr,
-                    conn_origin,
-                    substream,
-                } => {
-                    let notify_swarm = NetworkBehaviourAction::GenerateEvent(IotaGossipEvent::UpgradeCompleted {
-                        peer_id,
-                        peer_addr,
-                        conn_origin,
-                        substream,
-                    });
-
-                    return Poll::Ready(notify_swarm);
-                }
-
-                IotaGossipHandlerEvent::UpgradeError { peer_id, error } => {
-                    let notify_swarm =
-                        NetworkBehaviourAction::GenerateEvent(IotaGossipEvent::UpgradeError { peer_id, error });
-
-                    return Poll::Ready(notify_swarm);
-                }
-            }
-        }
-
-        Poll::Pending
-    }
-
-    fn addresses_of_peer(&mut self, peer_id: &PeerId) -> Vec<Multiaddr> {
-        trace!("IOTA gossip protocol: return addresses of peer {}.", alias!(peer_id));
-        Vec::new()
-    }
-
-    fn inject_disconnected(&mut self, peer_id: &PeerId) {
-        trace!("gossip behavior: {} disconnected.", alias!(peer_id));
     }
 }

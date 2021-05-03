@@ -116,16 +116,16 @@ async fn network_host_processor(
 
     loop {
         let swarm_next_event = Swarm::next_event(&mut swarm);
-        let recv_command = (&mut internal_command_receiver).recv();
+        let recv_int_command = (&mut internal_command_receiver).recv();
 
         tokio::select! {
             _ = &mut shutdown => break,
             event = swarm_next_event => {
                 process_swarm_event(event, &internal_event_sender, &peerlist).await;
             }
-            command = recv_command => {
+            command = recv_int_command => {
                 if let Some(command) = command {
-                    process_command(command, &mut swarm, &peerlist).await;
+                    process_icommand(command, &mut swarm, &peerlist).await;
                 }
             },
         }
@@ -176,16 +176,16 @@ async fn process_swarm_event(
     }
 }
 
-async fn process_command(command: Command, swarm: &mut Swarm<SwarmBehavior>, peerlist: &PeerList) {
-    match command {
-        Command::DialPeer { peer_id } => {
-            if let Err(e) = dial_peer(swarm, peer_id, peerlist).await {
-                warn!("Failed to dial peer '...{}'. Cause: {}", alias!(peer_id), e);
-            }
-        }
+async fn process_icommand(icommand: Command, swarm: &mut Swarm<SwarmBehavior>, peerlist: &PeerList) {
+    match icommand {
         Command::DialAddress { address } => {
             if let Err(e) = dial_addr(swarm, address.clone(), peerlist).await {
                 warn!("Failed to dial address '{}'. Cause: {}", address, e);
+            }
+        }
+        Command::DialPeer { peer_id } => {
+            if let Err(e) = dial_peer(swarm, peer_id, peerlist).await {
+                warn!("Failed to dial peer '...{}'. Cause: {}", alias!(peer_id), e);
             }
         }
         _ => {}
@@ -213,11 +213,16 @@ async fn dial_peer(swarm: &mut Swarm<SwarmBehavior>, peer_id: PeerId, peerlist: 
 
     // Panic:
     // We just checked, that the peer is fine to be dialed.
-    let PeerInfo { address, alias, .. } = peerlist.0.read().await.info(&peer_id).unwrap();
+    let PeerInfo { alias, .. } = peerlist.0.read().await.info(&peer_id).unwrap();
 
     info!("Dialing peer: {} ({}).", alias, alias!(peer_id));
 
-    Swarm::dial_addr(swarm, address).map_err(|_| Error::DialingPeerFailed(peer_id))?;
+    if Swarm::is_connected(swarm, &peer_id) {
+        warn!("Already connected to {}", peer_id);
+        // Swarm::behaviour_mut(swarm).
+    } else {
+        Swarm::dial(swarm, &peer_id).map_err(|_| Error::DialingPeerFailed(peer_id))?;
+    }
 
     Ok(())
 }
