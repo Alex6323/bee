@@ -206,11 +206,6 @@ impl<B: StorageBackend> NodeBuilder<BeeNode<B>> for BeeNodeBuilder<B> {
 
         let this = self.with_resource(config.clone()); // TODO: Remove clone
 
-        info!("Initializing network layer...");
-        let (this, events) = bee_network::integrated::init::<BeeNode<B>>(network_config, local_keys, network_id, this)
-            .await
-            .map_err(Error::NetworkInitializationFailed)?;
-
         #[cfg(unix)]
         let this = this.with_resource(shutdown_listener(vec![
             SignalKind::interrupt(),
@@ -222,6 +217,11 @@ impl<B: StorageBackend> NodeBuilder<BeeNode<B>> for BeeNodeBuilder<B> {
         info!("Initializing ledger...");
         let this =
             bee_ledger::workers::init::<BeeNode<B>>(this, network_id, config.snapshot.clone(), config.pruning.clone());
+
+        info!("Initializing network layer...");
+        let (this, events) = bee_network::integrated::init::<BeeNode<B>>(network_config, local_keys, network_id, this)
+            .await
+            .map_err(Error::NetworkInitializationFailed)?;
 
         info!("Initializing protocol layer...");
         let this = bee_protocol::workers::init::<BeeNode<B>>(config.protocol.clone(), network_id, events, this);
