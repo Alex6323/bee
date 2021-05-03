@@ -22,6 +22,7 @@ pub struct NetworkHostConfig {
     pub internal_command_receiver: CommandReceiver,
     pub peerlist: PeerList,
     pub swarm: Swarm<SwarmBehavior>,
+    pub bind_multiaddr: Multiaddr,
 }
 
 pub mod integrated {
@@ -51,7 +52,10 @@ pub mod integrated {
 
         async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
             node.spawn::<Self, _, _>(|shutdown| async move {
-                network_host_processor(config, shutdown).await;
+                if let Err(e) = network_host_processor(config, shutdown).await {
+                    error!("{:?}", e);
+                    panic!("Fatal error.");
+                }
 
                 info!("Network Host stopped.");
             });
@@ -75,27 +79,40 @@ pub mod standalone {
             Self { shutdown }
         }
 
-        pub async fn start(self, config: NetworkHostConfig) {
+        pub async fn start(self, config: NetworkHostConfig) -> Result<(), crate::Error> {
             let NetworkHost { shutdown } = self;
 
             tokio::spawn(async move {
-                network_host_processor(config, shutdown).await;
+                if let Err(e) = network_host_processor(config, shutdown).await {
+                    error!("{:?}", e);
+                    panic!("Fatal error.");
+                }
 
                 info!("Network Host stopped.");
             });
 
             info!("Network Host started.");
+
+            Ok(())
         }
     }
 }
 
-async fn network_host_processor(config: NetworkHostConfig, mut shutdown: oneshot::Receiver<()>) {
+async fn network_host_processor(
+    config: NetworkHostConfig,
+    mut shutdown: oneshot::Receiver<()>,
+) -> Result<(), crate::Error> {
     let NetworkHostConfig {
         internal_event_sender,
         mut internal_command_receiver,
         peerlist,
         mut swarm,
+        bind_multiaddr,
     } = config;
+
+    // Try binding to the configured bind address.
+    info!("Binding to: {}", bind_multiaddr);
+    let _listener_id = Swarm::listen_on(&mut swarm, bind_multiaddr).map_err(|_| crate::Error::BindingAddressFailed)?;
 
     loop {
         let swarm_next_event = Swarm::next_event(&mut swarm);
@@ -113,6 +130,8 @@ async fn network_host_processor(config: NetworkHostConfig, mut shutdown: oneshot
             },
         }
     }
+
+    Ok(())
 }
 
 async fn process_swarm_event(
