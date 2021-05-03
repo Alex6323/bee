@@ -158,13 +158,13 @@ impl PeerList {
             .map(|(info, state)| predicate(info, state))
     }
 
-    pub fn filter<'a, P: 'a>(&'a self, predicate: P) -> impl Iterator<Item = (PeerId, String)> + '_
+    pub fn filter_info<'a, P: 'a>(&'a self, predicate: P) -> impl Iterator<Item = (PeerId, PeerInfo)> + '_
     where
         P: Fn(&PeerInfo, &PeerState) -> bool,
     {
         self.peers.iter().filter_map(move |(peer_id, (info, state))| {
             if predicate(info, state) {
-                Some((*peer_id, info.alias.clone()))
+                Some((*peer_id, info.clone()))
             } else {
                 None
             }
@@ -338,7 +338,7 @@ impl PeerList {
 
     fn find_peer_if_connected(&self, addr: &Multiaddr) -> Option<PeerId> {
         #[allow(clippy::filter_next)]
-        self.filter(|info, state| state.is_connected() && info.address == *addr)
+        self.filter_info(|info, state| state.is_connected() && info.address == *addr)
             .next()
             .map(|(peer_id, _)| peer_id)
     }

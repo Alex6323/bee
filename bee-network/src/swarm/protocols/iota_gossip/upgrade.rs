@@ -24,7 +24,7 @@ impl UpgradeInfo for IotaGossipProtocolUpgrade {
     type InfoIter = iter::Once<Self::Info>;
 
     fn protocol_info(&self) -> Self::InfoIter {
-        trace!("IOTA gossip upgrade protocol info queried");
+        trace!("gossip upgrade: protocol info query: {}", self.info);
 
         iter::once(self.info.clone())
     }
@@ -39,7 +39,7 @@ where
     type Future = future::Ready<Result<Self::Output, io::Error>>;
 
     fn upgrade_inbound(self, stream: S, info: Self::Info) -> Self::Future {
-        trace!("IOTA gossip upgrade inbound: {:?}", info);
+        trace!("gossip upgrade: inbound: {}", info);
 
         future::ok(stream)
     }
@@ -54,7 +54,7 @@ where
     type Future = future::Ready<Result<Self::Output, io::Error>>;
 
     fn upgrade_outbound(self, stream: S, info: Self::Info) -> Self::Future {
-        trace!("IOTA gossip upgrade outbound: {:?}", info);
+        trace!("gossip upgrade: outbound: {}", info);
 
         future::ok(stream)
     }

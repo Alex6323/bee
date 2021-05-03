@@ -213,11 +213,12 @@ async fn peerstate_checker(shutdown: Shutdown, senders: Senders, peerlist: PeerL
 
         info!("Peers connected: {}/{}", num_connected, num_peers);
 
-        for (peer_id, alias) in peerlist.filter(|info, state| info.relation.is_known() && state.is_disconnected()) {
-            info!("Trying to connect to: {} ({}).", alias, alias!(peer_id));
+        for (peer_id, info) in peerlist.filter_info(|info, state| info.relation.is_known() && state.is_disconnected()) {
+            info!("Trying to connect to: {} ({}).", info.alias, alias!(peer_id));
 
             // Ignore if the command fails. We can always retry the next time.
-            let _ = internal_commands.send(Command::DialPeer { peer_id });
+            // let _ = internal_commands.send(Command::DialPeer { peer_id });
+            let _ = internal_commands.send(Command::DialAddress { address: info.address });
         }
     }
 

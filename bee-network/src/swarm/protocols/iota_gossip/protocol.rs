@@ -122,8 +122,6 @@ impl NetworkBehaviour for IotaGossipProtocol {
     /// Messages sent from the handler to the behaviour are injected with `inject_event`, and
     /// the behaviour can send a message to the handler by making `poll` return `SendEvent`.
     fn new_handler(&mut self) -> Self::ProtocolsHandler {
-        debug!("gossip protocol: new handler.");
-
         self.num_handlers += 1;
         debug!("gossip protocol: new handler ({}).", self.num_handlers);
 

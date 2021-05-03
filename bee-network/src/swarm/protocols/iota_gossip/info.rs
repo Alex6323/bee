@@ -5,6 +5,8 @@
 
 use libp2p_core::ProtocolName;
 
+use std::fmt;
+
 #[derive(Debug, Clone)]
 pub struct IotaGossipInfo {
     name: String,
@@ -29,5 +31,13 @@ impl IotaGossipInfo {
 impl ProtocolName for IotaGossipInfo {
     fn protocol_name(&self) -> &[u8] {
         &self.buffered
+    }
+}
+
+impl fmt::Display for IotaGossipInfo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Panic:
+        // Unwrapping is fine, because we made sure `buffered` contains a valid Utf8 string.
+        write!(f, "{}", String::from_utf8(self.buffered.clone()).unwrap())
     }
 }

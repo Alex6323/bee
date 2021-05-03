@@ -17,7 +17,7 @@ use libp2p::{
 
 use std::time::Duration;
 
-const MAX_CONNECTIONS_PER_PEER: u32 = 1;
+const MAX_CONNECTIONS_PER_PEER: u32 = 2;
 const DEFAULT_CONNECTION_TIMEOUT_SECS: u64 = 10;
 
 pub fn build_swarm(
