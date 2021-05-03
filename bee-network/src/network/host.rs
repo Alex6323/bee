@@ -180,12 +180,12 @@ async fn process_icommand(icommand: Command, swarm: &mut Swarm<SwarmBehavior>, p
     match icommand {
         Command::DialAddress { address } => {
             if let Err(e) = dial_addr(swarm, address.clone(), peerlist).await {
-                warn!("Failed to dial address '{}'. Cause: {}", address, e);
+                warn!("{:?}", e);
             }
         }
         Command::DialPeer { peer_id } => {
             if let Err(e) = dial_peer(swarm, peer_id, peerlist).await {
-                warn!("Failed to dial peer '...{}'. Cause: {}", alias!(peer_id), e);
+                warn!("{:?}", e);
             }
         }
         _ => {}
@@ -200,7 +200,7 @@ async fn dial_addr(swarm: &mut Swarm<SwarmBehavior>, addr: Multiaddr, peerlist: 
 
     info!("Dialing address: {}.", addr);
 
-    Swarm::dial_addr(swarm, addr.clone()).map_err(|_| Error::DialingAddressFailed(addr))?;
+    Swarm::dial_addr(swarm, addr.clone()).map_err(|e| Error::DialingAddressFailed(addr, e))?;
 
     Ok(())
 }
@@ -219,9 +219,8 @@ async fn dial_peer(swarm: &mut Swarm<SwarmBehavior>, peer_id: PeerId, peerlist: 
 
     if Swarm::is_connected(swarm, &peer_id) {
         warn!("Already connected to {}", peer_id);
-        // Swarm::behaviour_mut(swarm).
     } else {
-        Swarm::dial(swarm, &peer_id).map_err(|_| Error::DialingPeerFailed(peer_id))?;
+        Swarm::dial(swarm, &peer_id).map_err(|e| Error::DialingPeerFailed(peer_id, e))?;
     }
 
     Ok(())
