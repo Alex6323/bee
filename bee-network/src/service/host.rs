@@ -12,14 +12,19 @@ use crate::{
     init::global::reconnect_interval_secs,
     peer::{
         error::Error as PeerError,
+        info::{PeerInfo, PeerRelation},
         list::PeerListWrapper as PeerList,
-        meta::{PeerInfo, PeerRelation},
     },
+    swarm::protocols::iota_gossip,
 };
 
 use bee_runtime::shutdown_stream::ShutdownStream;
 
-use futures::{channel::oneshot, StreamExt};
+use futures::{
+    channel::oneshot,
+    io::{BufReader, BufWriter},
+    AsyncReadExt, StreamExt,
+};
 use libp2p::{identity, Multiaddr, PeerId};
 use log::*;
 use rand::Rng;
@@ -48,6 +53,8 @@ pub struct Receivers {
 }
 
 type Shutdown = oneshot::Receiver<()>;
+
+const IO_BUFFER_LEN: usize = 32 * 1024;
 
 pub mod integrated {
     use super::*;
@@ -317,8 +324,8 @@ async fn process_command(command: Command, senders: &Senders, peerlist: &PeerLis
     Ok(())
 }
 
-async fn process_internal_event(int_event: InternalEvent, senders: &Senders, peerlist: &PeerList) -> Result<(), Error> {
-    match int_event {
+async fn process_internal_event(i_event: InternalEvent, senders: &Senders, peerlist: &PeerList) -> Result<(), Error> {
+    match i_event {
         InternalEvent::AddressBound { address } => {
             senders
                 .events
@@ -347,59 +354,82 @@ async fn process_internal_event(int_event: InternalEvent, senders: &Senders, pee
         InternalEvent::ProtocolEstablished {
             peer_id,
             peer_addr,
-            conn_info,
-            gossip_in,
-            gossip_out,
+            origin,
+            substream,
+            /* gossip_in,
+             * gossip_out, */
         } => {
             let mut peerlist = peerlist.0.write().await;
+            let mut peer_added = false;
 
-            // In case the peer doesn't exist yet, we create a `PeerInfo` for that peer on-the-fly.
-            if !peerlist.contains(&peer_id) {
-                let peer_info = PeerInfo {
-                    address: peer_addr,
-                    alias: alias!(peer_id).to_string(),
-                    relation: PeerRelation::Unknown,
-                };
+            // NOTE: It's a bit unfortunate that atm there seems to be no way to inject custom criteria to prevent
+            // protocol negotiation. So we have to run the checks whether we want to allow that peer - and spend
+            // resources on it - here.
 
-                peerlist
-                    .insert_peer(peer_id, peer_info.clone())
-                    .map_err(|(_, _, e)| e)?;
+            if peerlist.accepts_incoming_peer(&peer_id, &peer_addr).is_ok() {
+                // If the peer doesn't exist yet - but is accepted as an "unknown" peer, we insert it now.
+                if !peerlist.contains(&peer_id) {
+                    let peer_info = PeerInfo {
+                        address: peer_addr,
+                        alias: alias!(peer_id).to_string(),
+                        relation: PeerRelation::Unknown,
+                    };
+                    peerlist.insert_peer(peer_id, peer_info).map_err(|(_, _, e)| e)?;
+                    peer_added = true;
+                }
+
+                // Panic:
+                // We made sure, that the peer id exists in the above if-branch, hence, unwrapping is fine.
+                let peer_info = peerlist.info(&peer_id).unwrap();
+
+                // Spin up separate buffered reader and writer to efficiently process the gossip with that peer.
+                let (r, w) = substream.split();
+
+                let reader = BufReader::with_capacity(IO_BUFFER_LEN, r);
+                let writer = BufWriter::with_capacity(IO_BUFFER_LEN, w);
+
+                let (incoming_tx, incoming_rx) = iota_gossip::channel();
+                let (outgoing_tx, outgoing_rx) = iota_gossip::channel();
+
+                iota_gossip::start_incoming_processor(peer_id, reader, incoming_tx, senders.internal_events.clone());
+                iota_gossip::start_outgoing_processor(peer_id, writer, outgoing_rx, senders.internal_events.clone());
+
+                // We store a clone of the gossip send channel in order to send a shutdown signal.
+                let _ = peerlist.update_state(&peer_id, |state| state.set_connected(outgoing_tx.clone()));
+
+                // We no longer need to hold the lock.
+                drop(peerlist);
+
+                // We only want to fire events when no longer holding the lock to the peerlist to make this code more
+                // resilient against different channel implementations.
+
+                if peer_added {
+                    senders
+                        .events
+                        .send(Event::PeerAdded {
+                            peer_id,
+                            info: peer_info.clone(),
+                        })
+                        .map_err(|_| Error::SendingEventFailed)?;
+                }
+
+                info!(
+                    "Established ({}) protocol with {} ({}).",
+                    origin,
+                    peer_info.alias,
+                    alias!(peer_id)
+                );
 
                 senders
                     .events
-                    .send(Event::PeerAdded {
+                    .send(Event::PeerConnected {
                         peer_id,
                         info: peer_info,
+                        gossip_in: incoming_rx,
+                        gossip_out: outgoing_tx,
                     })
                     .map_err(|_| Error::SendingEventFailed)?;
             }
-
-            // Panic:
-            // We made sure, that the peer id exists in the above if-branch, hence, unwrapping is fine.
-            let peer_info = peerlist.info(&peer_id).unwrap();
-
-            // We store a clone of the gossip send channel in order to send a shutdown signal.
-            let _ = peerlist.update_state(&peer_id, |state| state.set_connected(gossip_out.clone()));
-
-            // We no longer need to hold the lock.
-            drop(peerlist);
-
-            info!(
-                "Established ({}) protocol with {} ({}).",
-                conn_info.origin,
-                peer_info.alias,
-                alias!(peer_id)
-            );
-
-            senders
-                .events
-                .send(Event::PeerConnected {
-                    peer_id,
-                    info: peer_info,
-                    gossip_in,
-                    gossip_out,
-                })
-                .map_err(|_| Error::SendingEventFailed)?;
         }
     }
 

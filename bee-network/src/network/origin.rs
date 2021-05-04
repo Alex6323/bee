@@ -3,13 +3,6 @@
 
 use std::fmt;
 
-/// Meta information about an established connection.
-#[derive(Clone, Debug)]
-pub struct ConnectionInfo {
-    /// Whether the connection is inbound or outbound.
-    pub origin: Origin,
-}
-
 /// Describes direction of an established connection.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Origin {

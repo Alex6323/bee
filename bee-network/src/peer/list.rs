@@ -5,10 +5,10 @@
 
 use super::{
     error::Error,
-    meta::{PeerInfo, PeerRelation},
+    info::{PeerInfo, PeerRelation},
 };
 
-use crate::{alias, config::Peer, init::global::max_unknown_peers, swarm::protocols::iota_gossip::GossipSender};
+use crate::{alias, config::Peer, init::global, swarm::protocols::iota_gossip::GossipSender};
 
 use hashbrown::{HashMap, HashSet};
 use libp2p::{Multiaddr, PeerId};
@@ -236,11 +236,11 @@ impl PeerList {
         }
     }
 
-    pub fn unban_address(&mut self, address: &Multiaddr) -> Result<(), Error> {
-        if self.banned_addrs.remove(address) {
+    pub fn unban_address(&mut self, addr: &Multiaddr) -> Result<(), Error> {
+        if self.banned_addrs.remove(addr) {
             Ok(())
         } else {
-            Err(Error::AddressIsUnbanned(address.clone()))
+            Err(Error::AddressIsUnbanned(addr.clone()))
         }
     }
 
@@ -248,26 +248,26 @@ impl PeerList {
         self.banned_peers.contains(peer_id)
     }
 
-    pub fn is_addr_banned(&self, address: &Multiaddr) -> bool {
-        self.banned_addrs.contains(address)
+    pub fn is_addr_banned(&self, addr: &Multiaddr) -> bool {
+        self.banned_addrs.contains(addr)
     }
 
-    pub fn accepts_incoming_peer(&self, peer_id: &PeerId, peer_info: &PeerInfo) -> Result<(), Error> {
+    pub fn accepts_incoming_peer(&self, peer_id: &PeerId, peer_addr: &Multiaddr) -> Result<(), Error> {
         // Deny ourself as peer.
         if peer_id == &self.local_id {
             Err(Error::PeerIsLocal(*peer_id))
         } else
         // Deny one of our own addresses.
-        if self.local_addrs.contains(&peer_info.address) {
-            Err(Error::AddressIsLocal(peer_info.address.clone()))
+        if self.local_addrs.contains(&peer_addr) {
+            Err(Error::AddressIsLocal(peer_addr.clone()))
         } else
         // Deny banned peers.
         if self.banned_peers.contains(peer_id) {
             Err(Error::PeerIsBanned(*peer_id))
         } else
         // Deny banned addresses.
-        if self.banned_addrs.contains(&peer_info.address) {
-            Err(Error::AddressIsBanned(peer_info.address.clone()))
+        if self.banned_addrs.contains(&peer_addr) {
+            Err(Error::AddressIsBanned(peer_addr.clone()))
         } else
         // Deny already connected peers.
         if self
@@ -277,10 +277,10 @@ impl PeerList {
             Err(Error::PeerIsConnected(*peer_id))
         } else
         // Deny more than the configured unknown peers.
-        if peer_info.relation.is_unknown()
-            && self.filter_count(|info, _| info.relation.is_unknown()) >= max_unknown_peers()
+        if !self.contains(&peer_id)
+            && self.filter_count(|info, _| info.relation.is_unknown()) >= global::max_unknown_peers()
         {
-            Err(Error::ExceedsUnknownPeerLimit(max_unknown_peers()))
+            Err(Error::ExceedsUnknownPeerLimit(global::max_unknown_peers()))
         } else
         // All checks passed! Accept that peer.
         {
@@ -321,9 +321,9 @@ impl PeerList {
             } else
             // Deny dialing more than configured unkown peers.
             if peer_info.relation.is_unknown()
-                && self.filter_count(|info, _| info.relation.is_unknown()) >= max_unknown_peers()
+                && self.filter_count(|info, _| info.relation.is_unknown()) >= global::max_unknown_peers()
             {
-                Err(Error::ExceedsUnknownPeerLimit(max_unknown_peers()))
+                Err(Error::ExceedsUnknownPeerLimit(global::max_unknown_peers()))
             } else
             // All checks passed! Allow dialing that peer.
             {

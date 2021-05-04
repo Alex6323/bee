@@ -3,7 +3,7 @@
 
 use super::{event::IotaGossipHandlerEvent, id::IotaGossipIdentifier, upgrade::IotaGossipProtocolUpgrade};
 
-use crate::network::meta::Origin;
+use crate::network::origin::Origin;
 
 use libp2p::{
     core::upgrade::OutboundUpgrade,

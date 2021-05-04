@@ -18,7 +18,7 @@ mod swarm;
 mod tests;
 
 // Always exported
-pub use self::peer::meta::{PeerInfo, PeerRelation};
+pub use self::peer::info::{PeerInfo, PeerRelation};
 #[doc(inline)]
 pub use libp2p_core::{
     multiaddr::{Multiaddr, Protocol},
@@ -36,7 +36,7 @@ pub use crate::{
     error::Error,
     init::{integrated, standalone},
     network::host::integrated::NetworkHost,
-    network::meta::Origin,
+    network::origin::Origin,
     service::{
         command::{Command, NetworkCommandSender},
         event::{Event, NetworkEventReceiver},

@@ -5,7 +5,7 @@ use super::error::Error;
 
 use crate::{
     alias,
-    peer::{list::PeerListWrapper as PeerList, meta::PeerInfo},
+    peer::{info::PeerInfo, list::PeerListWrapper as PeerList},
     service::{
         command::{Command, CommandReceiver},
         event::{InternalEvent, InternalEventSender},
@@ -162,7 +162,7 @@ async fn process_swarm_event(
             error!("Swarm event: listener error {}.", error);
         }
         SwarmEvent::Dialing(peer_id) => {
-            // NB: strange, but this event is not actually fired when dialing. (open issue?)
+            // TODO: strange, but this event is not actually fired when dialing. (open issue?)
             debug!("Swarm event: dialing {}.", alias!(peer_id));
         }
         SwarmEvent::IncomingConnection { send_back_addr, .. } => {

@@ -4,12 +4,12 @@
 use super::command::Command;
 
 use crate::{
-    network::meta::ConnectionInfo,
-    peer::{error::Error as PeerError, meta::PeerInfo},
+    network::origin::Origin,
+    peer::{error::Error as PeerError, info::PeerInfo},
     swarm::protocols::iota_gossip::{GossipReceiver, GossipSender},
 };
 
-use libp2p::{Multiaddr, PeerId};
+use libp2p::{swarm::NegotiatedSubstream, Multiaddr, PeerId};
 use tokio::sync::mpsc;
 
 pub type EventSender = mpsc::UnboundedSender<Event>;
@@ -118,11 +118,13 @@ pub enum InternalEvent {
         /// The peer's address.
         peer_addr: Multiaddr,
         /// The associated connection info with that peer.
-        conn_info: ConnectionInfo,
-        /// The gossip-in channel.
-        gossip_in: GossipReceiver,
-        /// The gossip-out channel.
-        gossip_out: GossipSender,
+        origin: Origin,
+        /// The negotiated substream the protocol is running on.
+        substream: NegotiatedSubstream,
+        /* /// The gossip-in channel.
+         * gossip_in: GossipReceiver,
+         * /// The gossip-out channel.
+         * gossip_out: GossipSender, */
     },
 
     /// The gossip protocol has been dropped with a peer.

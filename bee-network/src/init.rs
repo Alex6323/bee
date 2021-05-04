@@ -7,8 +7,8 @@ use super::{
     config::NetworkConfig,
     error::Error,
     peer::{
+        info::{PeerInfo, PeerRelation},
         list::{PeerList, PeerListWrapper},
-        meta::{PeerInfo, PeerRelation},
     },
     service::{
         command::{command_channel, NetworkCommandSender},

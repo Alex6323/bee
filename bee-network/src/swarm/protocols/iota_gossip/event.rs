@@ -1,7 +1,7 @@
 // Copyright 2020-2021 IOTA Stiftung
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::network::meta::Origin;
+use crate::network::origin::Origin;
 
 use libp2p::{
     swarm::{NegotiatedSubstream, ProtocolsHandlerUpgrErr},
@@ -23,7 +23,7 @@ pub enum IotaGossipEvent {
     UpgradeCompleted {
         peer_id: PeerId,
         peer_addr: Multiaddr,
-        conn_origin: Origin,
+        origin: Origin,
         substream: NegotiatedSubstream,
     },
 
@@ -47,12 +47,7 @@ pub enum IotaGossipHandlerEvent {
     SentUpgradeRequest { to: PeerId },
 
     /// Successfully upgraded to the IOTA gossip protocol.
-    UpgradeCompleted {
-        // peer_id: PeerId,
-        // peer_addr: Multiaddr,
-        // conn_origin: Origin,
-        substream: NegotiatedSubstream,
-    },
+    UpgradeCompleted { substream: NegotiatedSubstream },
 
     /// An errror occured during the upgrade.
     UpgradeError {

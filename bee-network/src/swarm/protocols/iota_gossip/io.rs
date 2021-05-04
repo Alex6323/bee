@@ -15,7 +15,7 @@ use log::*;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
-const MSG_BUFFER_SIZE: usize = 32768;
+const MSG_BUFFER_LEN: usize = 32768;
 
 /// A type alias for an unbounded channel sender.
 pub type GossipSender = mpsc::UnboundedSender<Vec<u8>>;
@@ -23,19 +23,19 @@ pub type GossipSender = mpsc::UnboundedSender<Vec<u8>>;
 /// A type alias for an unbounded channel receiver.
 pub type GossipReceiver = UnboundedReceiverStream<Vec<u8>>;
 
-pub fn gossip_channel() -> (GossipSender, GossipReceiver) {
+pub fn channel() -> (GossipSender, GossipReceiver) {
     let (sender, receiver) = mpsc::unbounded_channel();
     (sender, UnboundedReceiverStream::new(receiver))
 }
 
-pub fn spawn_incoming_gossip_processor(
+pub fn start_incoming_processor(
     peer_id: PeerId,
     mut reader: BufReader<ReadHalf<NegotiatedSubstream>>,
     incoming_tx: GossipSender,
     internal_event_sender: InternalEventSender,
 ) {
     tokio::spawn(async move {
-        let mut msg_buf = vec![0u8; MSG_BUFFER_SIZE];
+        let mut msg_buf = vec![0u8; MSG_BUFFER_LEN];
 
         loop {
             if let Some(len) = (&mut reader).read(&mut msg_buf).await.ok().filter(|len| *len > 0) {
@@ -70,7 +70,7 @@ pub fn spawn_incoming_gossip_processor(
     });
 }
 
-pub fn spawn_outgoing_gossip_processor(
+pub fn start_outgoing_processor(
     peer_id: PeerId,
     mut writer: BufWriter<WriteHalf<NegotiatedSubstream>>,
     outgoing_rx: GossipReceiver,

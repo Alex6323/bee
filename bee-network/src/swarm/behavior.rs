@@ -1,21 +1,13 @@
 // Copyright 2020-2021 IOTA Stiftung
 // SPDX-License-Identifier: Apache-2.0
 
-use super::protocols::iota_gossip::{
-    gossip_channel, spawn_incoming_gossip_processor, spawn_outgoing_gossip_processor, IotaGossipEvent,
-    IotaGossipProtocol,
-};
+use super::protocols::iota_gossip::{IotaGossipEvent, IotaGossipProtocol};
 
 use crate::{
     alias,
-    network::meta::ConnectionInfo,
     service::event::{InternalEvent, InternalEventSender},
 };
 
-use futures::{
-    io::{BufReader, BufWriter},
-    AsyncReadExt,
-};
 use libp2p::{
     identify::{Identify, IdentifyConfig, IdentifyEvent},
     identity::PublicKey,
@@ -25,7 +17,6 @@ use libp2p::{
 use log::*;
 
 const IOTA_PROTOCOL_VERSION: &str = "iota/0.1.0";
-const BUFFER_SIZE: usize = 32 * 1024;
 
 #[derive(NetworkBehaviour)]
 pub struct SwarmBehavior {
@@ -85,28 +76,16 @@ impl NetworkBehaviourEventProcess<IotaGossipEvent> for SwarmBehavior {
             IotaGossipEvent::UpgradeCompleted {
                 peer_id,
                 peer_addr,
-                conn_origin,
+                origin,
                 substream,
             } => {
                 debug!("Successfully negotiated IOTA gossip protocol with {}.", alias!(peer_id));
 
-                let (r, w) = substream.split();
-
-                let reader = BufReader::with_capacity(BUFFER_SIZE, r);
-                let writer = BufWriter::with_capacity(BUFFER_SIZE, w);
-
-                let (incoming_tx, incoming_rx) = gossip_channel();
-                let (outgoing_tx, outgoing_rx) = gossip_channel();
-
-                spawn_incoming_gossip_processor(peer_id, reader, incoming_tx, self.internal_sender.clone());
-                spawn_outgoing_gossip_processor(peer_id, writer, outgoing_rx, self.internal_sender.clone());
-
                 if let Err(e) = self.internal_sender.send(InternalEvent::ProtocolEstablished {
                     peer_id,
                     peer_addr,
-                    conn_info: ConnectionInfo { origin: conn_origin },
-                    gossip_in: incoming_rx,
-                    gossip_out: outgoing_tx,
+                    origin,
+                    substream,
                 }) {
                     warn!(
                         "Send event error for {} after successfully established IOTA gossip protocol. Cause: {}",

@@ -7,7 +7,7 @@ use super::{
     id::IotaGossipIdentifier,
 };
 
-use crate::{alias, init::global::network_id, network::meta::Origin};
+use crate::{alias, init::global::network_id, network::origin::Origin};
 
 use libp2p::{
     core::{connection::ConnectionId, ConnectedPoint},
@@ -23,6 +23,26 @@ use std::{
 
 const IOTA_GOSSIP_NAME: &str = "iota-gossip";
 const IOTA_GOSSIP_VERSION: &str = "1.0.0";
+
+struct ConnectionInfo {
+    addr: Multiaddr,
+    origin: Origin,
+}
+
+#[derive(Debug)]
+struct SwarmEvent {
+    peer_id: PeerId,
+    peer_addr: Multiaddr,
+    conn_id: ConnectionId,
+    origin: Origin,
+}
+
+#[derive(Debug)]
+struct HandlerEvent {
+    peer_id: PeerId,
+    conn_id: ConnectionId,
+    event: IotaGossipHandlerEvent,
+}
 
 /// Substream upgrade protocol for `/iota-gossip/1.0.0`.
 pub struct IotaGossipProtocol {
@@ -43,26 +63,6 @@ pub struct IotaGossipProtocol {
 
     /// Maps peers to their connection infos. Peers can only have 1 gossip connection, hence the mapping is 1:1.
     peers: HashMap<PeerId, ConnectionInfo>,
-}
-
-struct ConnectionInfo {
-    addr: Multiaddr,
-    origin: Origin,
-}
-
-#[derive(Debug)]
-struct SwarmEvent {
-    peer_id: PeerId,
-    peer_addr: Multiaddr,
-    conn_id: ConnectionId,
-    origin: Origin,
-}
-
-#[derive(Debug)]
-struct HandlerEvent {
-    peer_id: PeerId,
-    conn_id: ConnectionId,
-    event: IotaGossipHandlerEvent,
 }
 
 impl IotaGossipProtocol {
@@ -151,7 +151,7 @@ impl NetworkBehaviour for IotaGossipProtocol {
 
         let notify_handler = NetworkBehaviourAction::NotifyHandler {
             peer_id: *peer_id,
-            handler: NotifyHandler::One(*conn_id), // TODO: try also ::Any
+            handler: NotifyHandler::One(*conn_id), // TODO: maybe better use ::Any ??
             event: handler_event,
         };
 
@@ -190,7 +190,7 @@ impl NetworkBehaviour for IotaGossipProtocol {
                     NetworkBehaviourAction::GenerateEvent(IotaGossipEvent::UpgradeCompleted {
                         peer_id,
                         peer_addr: conn_info.addr,
-                        conn_origin: conn_info.origin,
+                        origin: conn_info.origin,
                         substream,
                     })
                 } else {
