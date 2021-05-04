@@ -356,8 +356,6 @@ async fn process_internal_event(i_event: InternalEvent, senders: &Senders, peerl
             peer_addr,
             origin,
             substream,
-            /* gossip_in,
-             * gossip_out, */
         } => {
             let mut peerlist = peerlist.0.write().await;
             let mut peer_added = false;
@@ -366,7 +364,9 @@ async fn process_internal_event(i_event: InternalEvent, senders: &Senders, peerl
             // protocol negotiation. So we have to run the checks whether we want to allow that peer - and spend
             // resources on it - here.
 
-            if peerlist.accepts_incoming_peer(&peer_id, &peer_addr).is_ok() {
+            let accepted = peerlist.accepts_incoming_peer(&peer_id, &peer_addr);
+
+            if accepted.is_ok() {
                 // If the peer doesn't exist yet - but is accepted as an "unknown" peer, we insert it now.
                 if !peerlist.contains(&peer_id) {
                     let peer_info = PeerInfo {
@@ -429,6 +429,10 @@ async fn process_internal_event(i_event: InternalEvent, senders: &Senders, peerl
                         gossip_out: outgoing_tx,
                     })
                     .map_err(|_| Error::SendingEventFailed)?;
+            } else {
+                // Panic:
+                // This branch handles the error case, so unwrapping it is fine.
+                info!("{}", accepted.unwrap_err());
             }
         }
     }
