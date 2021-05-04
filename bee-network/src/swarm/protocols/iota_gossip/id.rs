@@ -20,9 +20,9 @@ impl IotaGossipIdentifier {
         let buffered = format!("/{}/{}/{}", name, network_id, version).into_bytes();
 
         Self {
-            name: name.to_string(),
+            name,
             network_id,
-            version: version.to_string(),
+            version,
             buffered,
         }
     }

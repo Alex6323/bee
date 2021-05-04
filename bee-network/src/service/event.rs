@@ -112,6 +112,7 @@ pub enum InternalEvent {
     },
 
     /// The gossip protocol has been established with a peer.
+    #[allow(clippy::large_enum_variant)]
     ProtocolEstablished {
         /// The peer's id.
         peer_id: PeerId,
@@ -120,11 +121,7 @@ pub enum InternalEvent {
         /// The associated connection info with that peer.
         origin: Origin,
         /// The negotiated substream the protocol is running on.
-        substream: NegotiatedSubstream,
-        /* /// The gossip-in channel.
-         * gossip_in: GossipReceiver,
-         * /// The gossip-out channel.
-         * gossip_out: GossipSender, */
+        substream: Box<NegotiatedSubstream>,
     },
 
     /// The gossip protocol has been dropped with a peer.

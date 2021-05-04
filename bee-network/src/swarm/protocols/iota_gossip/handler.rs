@@ -99,8 +99,9 @@ impl ProtocolsHandler for GossipProtocolHandler {
     ///
     /// Injects the output of a successful upgrade on a new inbound substream.
     fn inject_fully_negotiated_inbound(&mut self, new_inbound: NegotiatedSubstream, _: Self::InboundOpenInfo) {
-        let negotiated_inbound =
-            ProtocolsHandlerEvent::Custom(IotaGossipHandlerEvent::UpgradeCompleted { substream: new_inbound });
+        let negotiated_inbound = ProtocolsHandlerEvent::Custom(IotaGossipHandlerEvent::UpgradeCompleted {
+            substream: Box::new(new_inbound),
+        });
 
         debug!("gossip handler: fully negotiated inbound.");
 
@@ -115,7 +116,7 @@ impl ProtocolsHandler for GossipProtocolHandler {
     /// [`ProtocolsHandlerEvent::OutboundSubstreamRequest`].
     fn inject_fully_negotiated_outbound(&mut self, new_outbound: NegotiatedSubstream, _: Self::OutboundOpenInfo) {
         let negotiated_outbound = ProtocolsHandlerEvent::Custom(IotaGossipHandlerEvent::UpgradeCompleted {
-            substream: new_outbound,
+            substream: Box::new(new_outbound),
         });
 
         debug!("gossip handler: fully negotiated outbound.");
@@ -190,6 +191,7 @@ impl ProtocolsHandler for GossipProtocolHandler {
     /// **libp2p docs**:
     ///
     /// Should behave like `Stream::poll()`.
+    #[allow(clippy::type_complexity)]
     fn poll(
         &mut self,
         _: &mut Context<'_>,

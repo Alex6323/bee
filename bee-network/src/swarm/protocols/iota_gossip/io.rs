@@ -30,7 +30,7 @@ pub fn channel() -> (GossipSender, GossipReceiver) {
 
 pub fn start_incoming_processor(
     peer_id: PeerId,
-    mut reader: BufReader<ReadHalf<NegotiatedSubstream>>,
+    mut reader: BufReader<ReadHalf<Box<NegotiatedSubstream>>>,
     incoming_tx: GossipSender,
     internal_event_sender: InternalEventSender,
 ) {
@@ -72,7 +72,7 @@ pub fn start_incoming_processor(
 
 pub fn start_outgoing_processor(
     peer_id: PeerId,
-    mut writer: BufWriter<WriteHalf<NegotiatedSubstream>>,
+    mut writer: BufWriter<WriteHalf<Box<NegotiatedSubstream>>>,
     outgoing_rx: GossipReceiver,
     internal_event_sender: InternalEventSender,
 ) {

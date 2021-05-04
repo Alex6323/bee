@@ -253,57 +253,52 @@ impl PeerList {
     }
 
     pub fn accepts_incoming_peer(&self, peer_id: &PeerId, peer_addr: &Multiaddr) -> Result<(), Error> {
-        // Deny ourself as peer.
+        // Checks performed are:
+        // - Deny ourself as peer.
+        // - Deny one of our own addresses.
+        // - Deny banned peers.
+        // - Deny banned addresses.
+        // - Deny already connected peers.
+        // - Deny more than the configured unknown peers.
         if peer_id == &self.local_id {
             Err(Error::PeerIsLocal(*peer_id))
-        } else
-        // Deny one of our own addresses.
-        if self.local_addrs.contains(&peer_addr) {
+        } else if self.local_addrs.contains(&peer_addr) {
             Err(Error::AddressIsLocal(peer_addr.clone()))
-        } else
-        // Deny banned peers.
-        if self.banned_peers.contains(peer_id) {
+        } else if self.banned_peers.contains(peer_id) {
             Err(Error::PeerIsBanned(*peer_id))
-        } else
-        // Deny banned addresses.
-        if self.banned_addrs.contains(&peer_addr) {
+        } else if self.banned_addrs.contains(&peer_addr) {
             Err(Error::AddressIsBanned(peer_addr.clone()))
-        } else
-        // Deny already connected peers.
-        if self
+        } else if self
             .satisfies(peer_id, |_, state| state.is_connected())
             .unwrap_or(false)
         {
             Err(Error::PeerIsConnected(*peer_id))
-        } else
-        // Deny more than the configured unknown peers.
-        if !self.contains(&peer_id)
+        } else if !self.contains(&peer_id)
             && self.filter_count(|info, _| info.relation.is_unknown()) >= global::max_unknown_peers()
         {
             Err(Error::ExceedsUnknownPeerLimit(global::max_unknown_peers()))
-        } else
-        // All checks passed! Accept that peer.
-        {
+        } else {
+            // All checks passed! Accept that peer.
             Ok(())
         }
     }
 
     pub fn allows_dialing_peer(&self, peer_id: &PeerId) -> Result<(), Error> {
-        // Deny dialing ourself as peer.
+        // Checks performed are:
+        // - Deny dialing ourself as peer.
+        // - Deny dialing a peer that has not been added first. TODO: check if we might want to allow this!
+        // - Deny dialing a banned peer.
+        // - Deny dialing an already connected peer.
+        // - Deny dialing a local address.
+        // - Deny dialing a banned address.
+        // - Deny dialing more than configured unkown peers.
         if peer_id == &self.local_id {
             Err(Error::PeerIsLocal(*peer_id))
-        } else
-        // Deny dialing a peer that has not been added first.
-        // TODO: we might want to allow this.
-        if !self.contains(peer_id) {
+        } else if !self.contains(peer_id) {
             Err(Error::PeerNotPresent(*peer_id))
-        } else
-        // Deny dialing a banned peer.
-        if self.banned_peers.contains(peer_id) {
+        } else if self.banned_peers.contains(peer_id) {
             Err(Error::PeerIsBanned(*peer_id))
-        } else if
-        // Deny dialing an already connected peer.
-        self
+        } else if self
             .satisfies(peer_id, |_, state| state.is_connected())
             .unwrap_or(false)
         {
@@ -311,42 +306,34 @@ impl PeerList {
         } else {
             let (peer_info, _) = self.peers.get(peer_id).unwrap();
 
-            // Deny dialing a local address.
             if self.local_addrs.contains(&peer_info.address) {
                 Err(Error::AddressIsLocal(peer_info.address.clone()))
-            } else
-            // Deny dialing a banned address.
-            if self.banned_addrs.contains(&peer_info.address) {
+            } else if self.banned_addrs.contains(&peer_info.address) {
                 Err(Error::AddressIsBanned(peer_info.address.clone()))
-            } else
-            // Deny dialing more than configured unkown peers.
-            if peer_info.relation.is_unknown()
+            } else if peer_info.relation.is_unknown()
                 && self.filter_count(|info, _| info.relation.is_unknown()) >= global::max_unknown_peers()
             {
                 Err(Error::ExceedsUnknownPeerLimit(global::max_unknown_peers()))
-            } else
-            // All checks passed! Allow dialing that peer.
-            {
+            } else {
+                // All checks passed! Allow dialing that peer.
                 Ok(())
             }
         }
     }
 
     pub fn allows_dialing_addr(&self, addr: &Multiaddr) -> Result<(), Error> {
-        // Deny dialing a local address.
+        // Checks performed are:
+        // - Deny dialing a local address.
+        // - Deny dialing a banned address.
+        // - Deny dialing an already connected peer (with that address).
         if self.local_addrs.contains(addr) {
             Err(Error::AddressIsLocal(addr.clone()))
-        } else
-        // Deny dialing a banned address.
-        if self.banned_addrs.contains(addr) {
+        } else if self.banned_addrs.contains(addr) {
             Err(Error::AddressIsBanned(addr.clone()))
-        } else
-        // Deny dialing an already connected peer (with that address).
-        if let Some(peer_id) = self.find_peer_if_connected(addr) {
+        } else if let Some(peer_id) = self.find_peer_if_connected(addr) {
             Err(Error::PeerIsConnected(peer_id))
-        } else
-        // All checks passed! Allow dialing that address.
-        {
+        } else {
+            // All checks passed! Allow dialing that address.
             Ok(())
         }
     }
@@ -411,7 +398,7 @@ mod tests {
         let pl = PeerList::new(local_id);
 
         assert!(matches!(
-            pl.accepts_incoming_peer(&local_id, &gen_constant_peer_info()),
+            pl.accepts_incoming_peer(&local_id, &gen_constant_peer_info().address),
             Err(Error::PeerIsLocal(_))
         ));
     }
@@ -425,7 +412,7 @@ mod tests {
         let mut pl = PeerList::new(local_id);
 
         pl.insert_peer(peer_id, peer_info.clone()).unwrap();
-        pl.accepts_incoming_peer(&peer_id, &peer_info).unwrap();
+        pl.accepts_incoming_peer(&peer_id, &peer_info.address).unwrap();
     }
 
     #[test]
@@ -446,9 +433,7 @@ mod tests {
         assert_eq!(0, pl.len());
     }
 
-    // =======================================================
-    // helpers
-    // =======================================================
+    // ===== helpers =====
 
     pub fn gen_constant_peer_id() -> PeerId {
         "12D3KooWJWEKvSFbben74C7H4YtKjhPMTDxd7gP7zxWSUEeF27st".parse().unwrap()
@@ -519,7 +504,7 @@ impl PeerState {
 #[cfg(test)]
 mod peerstate_tests {
     use super::*;
-    use crate::swarm::protocols::gossip::io::gossip_channel;
+    use crate::swarm::protocols::iota_gossip::channel;
 
     #[test]
     fn new_peer_state() {
@@ -531,7 +516,7 @@ mod peerstate_tests {
     #[test]
     fn peer_state_change() {
         let mut peerstate = PeerState::Disconnected;
-        let (tx, _rx) = gossip_channel();
+        let (tx, _rx) = channel();
 
         peerstate.set_connected(tx);
         assert!(peerstate.is_connected());

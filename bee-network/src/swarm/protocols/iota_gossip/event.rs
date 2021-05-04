@@ -24,7 +24,7 @@ pub enum IotaGossipEvent {
         peer_id: PeerId,
         peer_addr: Multiaddr,
         origin: Origin,
-        substream: NegotiatedSubstream,
+        substream: Box<NegotiatedSubstream>,
     },
 
     /// An error occured during negotiation.
@@ -47,7 +47,7 @@ pub enum IotaGossipHandlerEvent {
     SentUpgradeRequest { to: PeerId },
 
     /// Successfully upgraded to the IOTA gossip protocol.
-    UpgradeCompleted { substream: NegotiatedSubstream },
+    UpgradeCompleted { substream: Box<NegotiatedSubstream> },
 
     /// An errror occured during the upgrade.
     UpgradeError {

@@ -67,6 +67,12 @@ pub struct IotaGossipProtocol {
 
 impl IotaGossipProtocol {
     pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl Default for IotaGossipProtocol {
+    fn default() -> Self {
         Self {
             id: IotaGossipIdentifier::new(IOTA_GOSSIP_NAME.into(), network_id(), IOTA_GOSSIP_VERSION.into()),
             num_handlers: 0,
@@ -142,7 +148,7 @@ impl NetworkBehaviour for IotaGossipProtocol {
 
         self.peers.insert(*peer_id, {
             ConnectionInfo {
-                addr: peer_addr.clone(),
+                addr: peer_addr,
                 origin,
             }
         });
