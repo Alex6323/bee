@@ -26,6 +26,8 @@ use rand::Rng;
 use tokio::time::{self, Duration, Instant};
 use tokio_stream::wrappers::{IntervalStream, UnboundedReceiverStream};
 
+const MAX_PEER_STATE_CHECKER_DELAY_MSECS: u64 = 2000;
+
 pub struct ServiceHostConfig {
     pub local_keys: identity::Keypair,
     pub senders: Senders,
@@ -195,7 +197,7 @@ async fn peerstate_checker(shutdown: Shutdown, senders: Senders, peerlist: PeerL
     // We want to reduce the overhead of simultaneous mutual dialing even if several nodes are started at the same time
     // (by script for example). We do this here by adding a small random delay to when this task will be executing
     // regular peer state checks.
-    let delay = Duration::from_millis(10000 + rand::thread_rng().gen_range(0u64..1000));
+    let delay = Duration::from_millis(rand::thread_rng().gen_range(0u64..MAX_PEER_STATE_CHECKER_DELAY_MSECS));
     let start = Instant::now() + delay;
 
     // The (currently) constant interval at which peer state checks happen.
@@ -222,8 +224,8 @@ async fn peerstate_checker(shutdown: Shutdown, senders: Senders, peerlist: PeerL
             info!("Trying to connect to: {} ({}).", info.alias, alias!(peer_id));
 
             // Ignore if the command fails. We can always retry the next time.
-            // let _ = internal_commands.send(Command::DialPeer { peer_id });
-            let _ = internal_commands.send(Command::DialAddress { address: info.address });
+            let _ = internal_commands.send(Command::DialPeer { peer_id });
+            // let _ = internal_commands.send(Command::DialAddress { address: info.address });
         }
     }
 

@@ -209,17 +209,21 @@ async fn dial_peer(swarm: &mut Swarm<SwarmBehavior>, peer_id: PeerId, peerlist: 
 
     // Panic:
     // We just checked, that the peer is fine to be dialed.
-    let PeerInfo { address, alias, .. } = peerlist.0.read().await.info(&peer_id).unwrap();
+    let PeerInfo {
+        address: addr, alias, ..
+    } = peerlist.0.read().await.info(&peer_id).unwrap();
 
     info!("Dialing peer: {} ({}).", alias, alias!(peer_id));
 
-    if Swarm::is_connected(swarm, &peer_id) {
-        warn!("Already connected to {}", peer_id);
-    } else {
-        // TODO: We also use `Swarm::dial_addr` here (instead of `Swarm::dial`) for now. See if it's better to change
-        // that.
-        Swarm::dial_addr(swarm, address.clone()).map_err(|e| Error::DialingPeerFailed(peer_id, e))?;
-    }
+    // if Swarm::is_connected(swarm, &peer_id) {
+    //     warn!("Already connected to {}", peer_id);
+    // } else {
+
+    // TODO: We also use `Swarm::dial_addr` here (instead of `Swarm::dial`) for now. See if it's better to change
+    // that.
+    Swarm::dial_addr(swarm, addr).map_err(|e| Error::DialingPeerFailed(peer_id, e))?;
+
+    // }
 
     Ok(())
 }
