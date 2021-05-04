@@ -25,6 +25,7 @@ use libp2p::{
 use log::*;
 
 const IOTA_PROTOCOL_VERSION: &str = "iota/0.1.0";
+const BUFFER_SIZE: usize = 32 * 1024;
 
 #[derive(NetworkBehaviour)]
 pub struct SwarmBehavior {
@@ -91,8 +92,8 @@ impl NetworkBehaviourEventProcess<IotaGossipEvent> for SwarmBehavior {
 
                 let (r, w) = substream.split();
 
-                let reader = BufReader::with_capacity(32 * 1024, r);
-                let writer = BufWriter::with_capacity(32 * 1024, w);
+                let reader = BufReader::with_capacity(BUFFER_SIZE, r);
+                let writer = BufWriter::with_capacity(BUFFER_SIZE, w);
 
                 let (incoming_tx, incoming_rx) = gossip_channel();
                 let (outgoing_tx, outgoing_rx) = gossip_channel();

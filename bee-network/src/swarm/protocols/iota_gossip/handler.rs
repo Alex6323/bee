@@ -1,7 +1,7 @@
 // Copyright 2020-2021 IOTA Stiftung
 // SPDX-License-Identifier: Apache-2.0
 
-use super::{event::IotaGossipHandlerEvent, info::IotaGossipInfo, upgrade::IotaGossipProtocolUpgrade};
+use super::{event::IotaGossipHandlerEvent, id::IotaGossipIdentifier, upgrade::IotaGossipProtocolUpgrade};
 
 use crate::network::meta::Origin;
 
@@ -9,11 +9,12 @@ use libp2p::{
     core::upgrade::OutboundUpgrade,
     swarm::{
         protocols_handler::{
-            KeepAlive, ProtocolsHandler, ProtocolsHandlerEvent, ProtocolsHandlerUpgrErr, SubstreamProtocol,
+            InboundUpgradeSend, KeepAlive, ProtocolsHandler, ProtocolsHandlerEvent, ProtocolsHandlerUpgrErr,
+            SubstreamProtocol,
         },
         NegotiatedSubstream,
     },
-    Multiaddr, PeerId,
+    Multiaddr,
 };
 
 use log::*;
@@ -22,68 +23,30 @@ use std::{
     collections::VecDeque,
     io,
     task::{Context, Poll},
-    time::{Duration, Instant},
 };
 
-const KEEP_ALIVE_UNTIL: Duration = Duration::from_secs(30);
-
 pub struct GossipProtocolHandler {
-    ///
-    info: IotaGossipInfo,
+    /// Exchanged protocol information necessary during negotiation.
+    info: IotaGossipIdentifier,
 
-    /// Keep the connection alive for some time.
+    /// Keep alive setting.
     keep_alive: KeepAlive,
 
-    ///
-    inbound_index: usize,
-
-    ///
-    outbound_index: usize,
-
-    // TODO: combine in and out events
-    ///
-    in_events: VecDeque<IotaGossipHandlerInEvent>,
-
-    ///
-    errors: VecDeque<(usize, ProtocolsHandlerUpgrErr<io::Error>)>,
-
-    /// Eventually determined [`PeerId`].
-    peer_id: Option<PeerId>,
-
-    /// Eventually determined [`Multiaddr`].
-    peer_addr: Option<Multiaddr>,
-
-    /// Eventually determined [`Origin`].
-    conn_origin: Option<Origin>,
-
-    /// Eventually determined [`NegotiatedSubstream`].
-    inbound: Option<NegotiatedSubstream>,
-
-    /// Eventually determined [`NegotiatedSubstream`].
-    outbound: Option<NegotiatedSubstream>,
+    /// All events produced by this handler.
+    events: VecDeque<ProtocolsHandlerEvent<IotaGossipProtocolUpgrade, (), IotaGossipHandlerEvent, io::Error>>,
 }
 
 #[derive(Debug)]
 pub struct IotaGossipHandlerInEvent {
-    pub peer_id: PeerId,
-    pub peer_addr: Multiaddr,
-    pub conn_origin: Origin,
+    pub origin: Origin,
 }
 
 impl GossipProtocolHandler {
-    pub fn new(inbound_index: usize, outbound_index: usize, info: IotaGossipInfo) -> Self {
+    pub fn new(info: IotaGossipIdentifier) -> Self {
         Self {
             info,
-            keep_alive: KeepAlive::Yes, // KeepAlive::Until(Instant::now() + KEEP_ALIVE_UNTIL),
-            inbound_index,
-            outbound_index,
-            in_events: VecDeque::with_capacity(16),
-            errors: VecDeque::with_capacity(16),
-            peer_id: None,
-            peer_addr: None,
-            conn_origin: None,
-            inbound: None,
-            outbound: None,
+            keep_alive: KeepAlive::Yes,
+            events: VecDeque::with_capacity(16),
         }
     }
 }
@@ -94,129 +57,147 @@ impl ProtocolsHandler for GossipProtocolHandler {
     type Error = io::Error;
     type InboundProtocol = IotaGossipProtocolUpgrade;
     type OutboundProtocol = IotaGossipProtocolUpgrade;
-    type InboundOpenInfo = usize;
-    type OutboundOpenInfo = usize;
+    type InboundOpenInfo = ();
+    type OutboundOpenInfo = ();
 
+    /// **libp2p docs**:
+    ///
+    /// The [`InboundUpgrade`](libp2p_core::upgrade::InboundUpgrade) to apply on inbound
+    /// substreams to negotiate the desired protocols.
+    ///
+    /// > **Note**: The returned `InboundUpgrade` should always accept all the generally
+    /// >           supported protocols, even if in a specific context a particular one is
+    /// >           not supported, (eg. when only allowing one substream at a time for a protocol).
+    /// >           This allows a remote to put the list of supported protocols in a cache.
     fn listen_protocol(&self) -> SubstreamProtocol<Self::InboundProtocol, Self::InboundOpenInfo> {
-        debug!("gossip handler: get listen protocol: {}", self.inbound_index);
+        debug!("gossip handler: responding to listen protocol request.");
 
-        SubstreamProtocol::new(IotaGossipProtocolUpgrade::new(self.info.clone()), self.inbound_index)
+        SubstreamProtocol::new(IotaGossipProtocolUpgrade::new(self.info.clone()), ())
     }
 
-    fn inject_event(&mut self, in_event: IotaGossipHandlerInEvent) {
-        debug!("gossip handler: received in-event: {:?}", in_event);
+    /// **libp2p docs**:
+    ///
+    /// Injects an event coming from the outside in the handler.
+    fn inject_event(&mut self, incoming_event: IotaGossipHandlerInEvent) {
+        debug!("gossip handler: received in-event: {:?}", incoming_event);
 
-        self.in_events.push_back(in_event);
-    }
+        let IotaGossipHandlerInEvent { origin } = incoming_event;
 
-    fn inject_fully_negotiated_inbound(
-        &mut self,
-        new_inbound: NegotiatedSubstream,
-        inbound_index: Self::InboundOpenInfo,
-    ) {
-        debug!("gossip handler: fully negotiated inbound: {}", inbound_index);
+        // We only send the upgrade request if this handler belongs to an outbound connection.
+        if origin == Origin::Outbound {
+            let send_request = ProtocolsHandlerEvent::OutboundSubstreamRequest {
+                protocol: SubstreamProtocol::new(IotaGossipProtocolUpgrade::new(self.info.clone()), ()),
+            };
 
-        if self.inbound.is_none() {
-            self.inbound.replace(new_inbound);
-        } else {
-            warn!("Inbound substream already exists.");
+            debug!("gossip handler: sending protocol upgrade request.");
+
+            self.events.push_back(send_request);
         }
     }
 
-    fn inject_fully_negotiated_outbound(
-        &mut self,
-        new_outbound: NegotiatedSubstream,
-        outbound_index: Self::OutboundOpenInfo,
-    ) {
-        debug!("gossip handler: fully negotiated outbound: {}", outbound_index);
+    /// **libp2p docs**:
+    ///
+    /// Injects the output of a successful upgrade on a new inbound substream.
+    fn inject_fully_negotiated_inbound(&mut self, new_inbound: NegotiatedSubstream, _: Self::InboundOpenInfo) {
+        let negotiated_inbound =
+            ProtocolsHandlerEvent::Custom(IotaGossipHandlerEvent::UpgradeCompleted { substream: new_inbound });
 
-        if self.outbound.is_none() {
-            self.outbound.replace(new_outbound);
-        } else {
-            warn!("Outbound substream already exists.");
-        }
+        debug!("gossip handler: fully negotiated inbound.");
+
+        self.events.push_back(negotiated_inbound);
     }
 
+    /// **libp2p docs**:
+    ///
+    /// Injects the output of a successful upgrade on a new outbound substream.
+    ///
+    /// The second argument is the information that was previously passed to
+    /// [`ProtocolsHandlerEvent::OutboundSubstreamRequest`].
+    fn inject_fully_negotiated_outbound(&mut self, new_outbound: NegotiatedSubstream, _: Self::OutboundOpenInfo) {
+        let negotiated_outbound = ProtocolsHandlerEvent::Custom(IotaGossipHandlerEvent::UpgradeCompleted {
+            substream: new_outbound,
+        });
+
+        debug!("gossip handler: fully negotiated outbound.");
+
+        self.events.push_back(negotiated_outbound);
+    }
+
+    /// **libp2p docs**:
+    ///
+    /// Notifies the handler of a change in the address of the remote.
+    fn inject_address_change(&mut self, new_address: &Multiaddr) {
+        debug!("gossip handler: new address: {}", new_address);
+    }
+
+    /// **libp2p docs**:
+    ///
+    /// Indicates to the handler that upgrading an outbound substream to the given protocol has failed.
     fn inject_dial_upgrade_error(
         &mut self,
-        outbound_index: Self::OutboundOpenInfo,
+        _: Self::OutboundOpenInfo,
         e: ProtocolsHandlerUpgrErr<<Self::OutboundProtocol as OutboundUpgrade<NegotiatedSubstream>>::Error>,
     ) {
         debug!("gossip handler: outbound upgrade error: {:?}", e);
 
-        self.errors.push_back((outbound_index, e));
+        // self.events.push_back(ProtocolsHandlerEvent::Close(e));
     }
 
-    fn connection_keep_alive(&self) -> KeepAlive {
-        // debug!("gossip handler: return KeepAlive variant.");
+    /// **libp2p docs**:
+    ///
+    /// Indicates to the handler that upgrading an inbound substream to the given protocol has failed.
+    fn inject_listen_upgrade_error(
+        &mut self,
+        _: Self::InboundOpenInfo,
+        e: ProtocolsHandlerUpgrErr<<Self::InboundProtocol as InboundUpgradeSend>::Error>,
+    ) {
+        debug!("gossip handler: inbound upgrade error: {:?}", e);
+        // let err = match e {
+        //     ProtocolsHandlerUpgrErr::Timeout => io::Error::new(io::ErrorKind::TimedOut, "timeout"),
+        //     ProtocolsHandlerUpgrErr::Timer => io::Error::new(io::ErrorKind::TimedOut, "timer"),
+        //     ProtocolsHandlerUpgrErr::Upgrade(err) => err,
+        // };
 
+        // self.events.push_back(ProtocolsHandlerEvent::Close(err));
+    }
+
+    /// **libp2p docs**:
+    ///
+    /// Returns until when the connection should be kept alive.
+    ///
+    /// This method is called by the `Swarm` after each invocation of
+    /// [`ProtocolsHandler::poll`] to determine if the connection and the associated
+    /// `ProtocolsHandler`s should be kept alive as far as this handler is concerned
+    /// and if so, for how long.
+    ///
+    /// Returning [`KeepAlive::No`] indicates that the connection should be
+    /// closed and this handler destroyed immediately.
+    ///
+    /// Returning [`KeepAlive::Until`] indicates that the connection may be closed
+    /// and this handler destroyed after the specified `Instant`.
+    ///
+    /// Returning [`KeepAlive::Yes`] indicates that the connection should
+    /// be kept alive until the next call to this method.
+    ///
+    /// > **Note**: The connection is always closed and the handler destroyed
+    /// > when [`ProtocolsHandler::poll`] returns an error. Furthermore, the
+    /// > connection may be closed for reasons outside of the control
+    /// > of the handler.
+    fn connection_keep_alive(&self) -> KeepAlive {
         self.keep_alive
     }
 
-    // #[allow(clippy::type_complexity)]
+    /// **libp2p docs**:
+    ///
+    /// Should behave like `Stream::poll()`.
     fn poll(
         &mut self,
         _: &mut Context<'_>,
     ) -> Poll<ProtocolsHandlerEvent<Self::OutboundProtocol, Self::OutboundOpenInfo, Self::OutEvent, Self::Error>> {
-        // Process swarm updates.
-        if let Some(in_event) = self.in_events.pop_front() {
-            let IotaGossipHandlerInEvent {
-                peer_id,
-                peer_addr,
-                conn_origin,
-            } = in_event;
-
-            // Update state of this handler with new information.
-            self.peer_id = Some(peer_id);
-            self.peer_addr = Some(peer_addr);
-            self.conn_origin = Some(conn_origin);
-
-            // By convention only send the update request for outbound connections
-            if conn_origin == Origin::Outbound {
-                let request_sent_event = ProtocolsHandlerEvent::OutboundSubstreamRequest {
-                    protocol: SubstreamProtocol::new(
-                        IotaGossipProtocolUpgrade::new(self.info.clone()),
-                        self.outbound_index,
-                    ),
-                };
-
-                debug!("gossip handler: protocol upgrade request sent.");
-
-                return Poll::Ready(request_sent_event);
-            } else {
-                debug!("gossip handler: waiting for protocol upgrade request.");
-
-                let waiting_for_request =
-                    ProtocolsHandlerEvent::Custom(IotaGossipHandlerEvent::AwaitingUpgradeRequest { from: peer_id });
-
-                return Poll::Ready(waiting_for_request);
-            }
+        if let Some(event) = self.events.pop_front() {
+            Poll::Ready(event)
+        } else {
+            Poll::Pending
         }
-
-        if let Some(inbound) = self.inbound.take() {
-            debug!("gossip handler: negotiated new inbound stream.");
-
-            return Poll::Ready(ProtocolsHandlerEvent::Custom(
-                IotaGossipHandlerEvent::UpgradeCompleted {
-                    peer_id: *self.peer_id.as_ref().unwrap(),
-                    peer_addr: self.peer_addr.as_ref().unwrap().clone(),
-                    conn_origin: *self.conn_origin.as_ref().unwrap(),
-                    substream: inbound,
-                },
-            ));
-        } else if let Some(outbound) = self.outbound.take() {
-            debug!("gossip handler: negotiated new outbound stream.");
-
-            return Poll::Ready(ProtocolsHandlerEvent::Custom(
-                IotaGossipHandlerEvent::UpgradeCompleted {
-                    peer_id: *self.peer_id.as_ref().unwrap(),
-                    peer_addr: self.peer_addr.as_ref().unwrap().clone(),
-                    conn_origin: *self.conn_origin.as_ref().unwrap(),
-                    substream: outbound,
-                },
-            ));
-        }
-
-        Poll::Pending
     }
 }

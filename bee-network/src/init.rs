@@ -24,7 +24,7 @@ use crate::{
     swarm::builder::build_swarm,
 };
 
-use libp2p::{identity, Swarm};
+use libp2p::identity;
 use log::info;
 use once_cell::sync::OnceCell;
 

@@ -52,10 +52,9 @@ pub mod integrated {
 
         async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
             node.spawn::<Self, _, _>(|shutdown| async move {
-                if let Err(e) = network_host_processor(config, shutdown).await {
-                    error!("{:?}", e);
-                    panic!("Fatal error.");
-                }
+                network_host_processor(config, shutdown)
+                    .await
+                    .expect("network host processor.");
 
                 info!("Network Host stopped.");
             });
@@ -79,21 +78,18 @@ pub mod standalone {
             Self { shutdown }
         }
 
-        pub async fn start(self, config: NetworkHostConfig) -> Result<(), crate::Error> {
+        pub async fn start(self, config: NetworkHostConfig) {
             let NetworkHost { shutdown } = self;
 
             tokio::spawn(async move {
-                if let Err(e) = network_host_processor(config, shutdown).await {
-                    error!("{:?}", e);
-                    panic!("Fatal error.");
-                }
+                network_host_processor(config, shutdown)
+                    .await
+                    .expect("network host processor.");
 
                 info!("Network Host stopped.");
             });
 
             info!("Network Host started.");
-
-            Ok(())
         }
     }
 }
@@ -220,8 +216,9 @@ async fn dial_peer(swarm: &mut Swarm<SwarmBehavior>, peer_id: PeerId, peerlist: 
     if Swarm::is_connected(swarm, &peer_id) {
         warn!("Already connected to {}", peer_id);
     } else {
-        // Swarm::dial(swarm, &peer_id).map_err(|e| Error::DialingPeerFailed(peer_id, e))?;
-        Swarm::dial_addr(swarm, address.clone()).map_err(|e| Error::DialingAddressFailed(address, e))?;
+        // TODO: We also use `Swarm::dial_addr` here (instead of `Swarm::dial`) for now. See if it's better to change
+        // that.
+        Swarm::dial_addr(swarm, address.clone()).map_err(|e| Error::DialingPeerFailed(peer_id, e))?;
     }
 
     Ok(())

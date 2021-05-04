@@ -48,9 +48,9 @@ pub enum IotaGossipHandlerEvent {
 
     /// Successfully upgraded to the IOTA gossip protocol.
     UpgradeCompleted {
-        peer_id: PeerId,
-        peer_addr: Multiaddr,
-        conn_origin: Origin,
+        // peer_id: PeerId,
+        // peer_addr: Multiaddr,
+        // conn_origin: Origin,
         substream: NegotiatedSubstream,
     },
 

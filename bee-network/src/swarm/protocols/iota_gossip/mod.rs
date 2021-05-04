@@ -3,7 +3,7 @@
 
 mod event;
 mod handler;
-mod info;
+mod id;
 mod io;
 mod protocol;
 mod upgrade;

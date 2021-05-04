@@ -253,91 +253,106 @@ impl PeerList {
     }
 
     pub fn accepts_incoming_peer(&self, peer_id: &PeerId, peer_info: &PeerInfo) -> Result<(), Error> {
+        // Deny ourself as peer.
         if peer_id == &self.local_id {
-            // Deny ourself as peer.
             Err(Error::PeerIsLocal(*peer_id))
-        } else if self.local_addrs.contains(&peer_info.address) {
-            // Deny one of our own addresses.
+        } else
+        // Deny one of our own addresses.
+        if self.local_addrs.contains(&peer_info.address) {
             Err(Error::AddressIsLocal(peer_info.address.clone()))
-        } else if self.banned_peers.contains(peer_id) {
-            // Deny banned peers.
+        } else
+        // Deny banned peers.
+        if self.banned_peers.contains(peer_id) {
             Err(Error::PeerIsBanned(*peer_id))
-        } else if self.banned_addrs.contains(&peer_info.address) {
-            // Deny banned addresses.
+        } else
+        // Deny banned addresses.
+        if self.banned_addrs.contains(&peer_info.address) {
             Err(Error::AddressIsBanned(peer_info.address.clone()))
-        } else if self
+        } else
+        // Deny already connected peers.
+        if self
             .satisfies(peer_id, |_, state| state.is_connected())
             .unwrap_or(false)
         {
-            // Deny already connected peers.
             Err(Error::PeerIsConnected(*peer_id))
-        } else if peer_info.relation.is_unknown()
+        } else
+        // Deny more than the configured unknown peers.
+        if peer_info.relation.is_unknown()
             && self.filter_count(|info, _| info.relation.is_unknown()) >= max_unknown_peers()
         {
-            // Deny more than configured unknown peers.
             Err(Error::ExceedsUnknownPeerLimit(max_unknown_peers()))
-        } else {
-            // All checks passed! Accept that peer.
+        } else
+        // All checks passed! Accept that peer.
+        {
             Ok(())
         }
     }
 
     pub fn allows_dialing_peer(&self, peer_id: &PeerId) -> Result<(), Error> {
+        // Deny dialing ourself as peer.
         if peer_id == &self.local_id {
-            // Deny dialing ourself as peer.
             Err(Error::PeerIsLocal(*peer_id))
-        } else if !self.contains(peer_id) {
-            // Deny dialing a peer that has not been added first.
-            // TODO: we might want to allow this.
+        } else
+        // Deny dialing a peer that has not been added first.
+        // TODO: we might want to allow this.
+        if !self.contains(peer_id) {
             Err(Error::PeerNotPresent(*peer_id))
-        } else if self.banned_peers.contains(peer_id) {
-            // Deny dialing a banned peer.
+        } else
+        // Deny dialing a banned peer.
+        if self.banned_peers.contains(peer_id) {
             Err(Error::PeerIsBanned(*peer_id))
-        } else if self
+        } else if
+        // Deny dialing an already connected peer.
+        self
             .satisfies(peer_id, |_, state| state.is_connected())
             .unwrap_or(false)
         {
-            // Deny dialing an already connected peer.
             Err(Error::PeerIsConnected(*peer_id))
         } else {
             let (peer_info, _) = self.peers.get(peer_id).unwrap();
 
+            // Deny dialing a local address.
             if self.local_addrs.contains(&peer_info.address) {
-                // Deny dialing a local address.
                 Err(Error::AddressIsLocal(peer_info.address.clone()))
-            } else if self.banned_addrs.contains(&peer_info.address) {
-                // Deny dialing a banned address.
+            } else
+            // Deny dialing a banned address.
+            if self.banned_addrs.contains(&peer_info.address) {
                 Err(Error::AddressIsBanned(peer_info.address.clone()))
-            } else if peer_info.relation.is_unknown()
+            } else
+            // Deny dialing more than configured unkown peers.
+            if peer_info.relation.is_unknown()
                 && self.filter_count(|info, _| info.relation.is_unknown()) >= max_unknown_peers()
             {
-                // Deny dialing more than configured unkown peers.
                 Err(Error::ExceedsUnknownPeerLimit(max_unknown_peers()))
-            } else {
-                // All checks passed! Allow dialing that peer.
+            } else
+            // All checks passed! Allow dialing that peer.
+            {
                 Ok(())
             }
         }
     }
 
     pub fn allows_dialing_addr(&self, addr: &Multiaddr) -> Result<(), Error> {
+        // Deny dialing a local address.
         if self.local_addrs.contains(addr) {
-            // Deny dialing a local address.
             Err(Error::AddressIsLocal(addr.clone()))
-        } else if self.banned_addrs.contains(addr) {
-            // Deny dialing a banned address.
+        } else
+        // Deny dialing a banned address.
+        if self.banned_addrs.contains(addr) {
             Err(Error::AddressIsBanned(addr.clone()))
-        } else if let Some(peer_id) = self.find_peer_if_connected(addr) {
-            // Deny dialing an already connected peer (with that address).
+        } else
+        // Deny dialing an already connected peer (with that address).
+        if let Some(peer_id) = self.find_peer_if_connected(addr) {
             Err(Error::PeerIsConnected(peer_id))
-        } else {
-            // All checks passed! Allow dialing that address.
+        } else
+        // All checks passed! Allow dialing that address.
+        {
             Ok(())
         }
     }
 
     fn find_peer_if_connected(&self, addr: &Multiaddr) -> Option<PeerId> {
-        #[allow(clippy::filter_next)]
+        // #[allow(clippy::filter_next)]
         self.filter_info(|info, state| state.is_connected() && info.address == *addr)
             .next()
             .map(|(peer_id, _)| peer_id)

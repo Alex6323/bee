@@ -208,10 +208,15 @@ async fn peerstate_checker(shutdown: Shutdown, senders: Senders, peerlist: PeerL
     while interval.next().await.is_some() {
         let peerlist = peerlist.0.read().await;
 
-        let num_connected = peerlist.filter_count(|_, state| state.is_connected());
-        let num_peers = peerlist.len();
+        let num_known = peerlist.filter_count(|info, _| info.relation.is_known());
+        let num_connected_known = peerlist.filter_count(|info, state| info.relation.is_known() && state.is_connected());
+        let num_connected_unknown =
+            peerlist.filter_count(|info, state| info.relation.is_unknown() && state.is_connected());
 
-        info!("Peers connected: {}/{}", num_connected, num_peers);
+        info!(
+            "Connected peers: known {}/{} unknown {}.",
+            num_connected_known, num_known, num_connected_unknown,
+        );
 
         for (peer_id, info) in peerlist.filter_info(|info, state| info.relation.is_known() && state.is_disconnected()) {
             info!("Trying to connect to: {} ({}).", info.alias, alias!(peer_id));

@@ -4,7 +4,7 @@
 use super::{
     event::{IotaGossipEvent, IotaGossipHandlerEvent},
     handler::{GossipProtocolHandler, IotaGossipHandlerInEvent},
-    info::IotaGossipInfo,
+    id::IotaGossipIdentifier,
 };
 
 use crate::{alias, init::global::network_id, network::meta::Origin};
@@ -26,21 +26,26 @@ const IOTA_GOSSIP_VERSION: &str = "1.0.0";
 
 /// Substream upgrade protocol for `/iota-gossip/1.0.0`.
 pub struct IotaGossipProtocol {
-    info: IotaGossipInfo,
+    /// The gossip protocol identifier.
+    id: IotaGossipIdentifier,
+
+    /// Counts the number of handlers created.
     num_handlers: usize,
+
+    /// Counts the number of inbound connections.
     num_inbounds: usize,
+
+    /// Counts the number of outbound connections.
     num_outbounds: usize,
 
     /// Events produced for the behavior and handlers.
     events: VecDeque<NetworkBehaviourAction<IotaGossipHandlerInEvent, IotaGossipEvent>>,
 
-    /// Maps addresses to peers.
-    /// TODO: support peers having multiple addresses
-    peer_addrs: HashMap<PeerId, ConnectionInfo>,
+    /// Maps peers to their connection infos. Peers can only have 1 gossip connection, hence the mapping is 1:1.
+    peers: HashMap<PeerId, ConnectionInfo>,
 }
 
 struct ConnectionInfo {
-    id: ConnectionId,
     addr: Multiaddr,
     origin: Origin,
 }
@@ -63,42 +68,12 @@ struct HandlerEvent {
 impl IotaGossipProtocol {
     pub fn new() -> Self {
         Self {
-            info: IotaGossipInfo::new(IOTA_GOSSIP_NAME.into(), network_id(), IOTA_GOSSIP_VERSION.into()),
+            id: IotaGossipIdentifier::new(IOTA_GOSSIP_NAME.into(), network_id(), IOTA_GOSSIP_VERSION.into()),
             num_handlers: 0,
             num_inbounds: 0,
             num_outbounds: 0,
             events: VecDeque::with_capacity(16),
-            peer_addrs: HashMap::with_capacity(8),
-        }
-    }
-
-    pub fn contains(&self, peer_id: &PeerId) -> bool {
-        self.peer_addrs.contains_key(peer_id)
-    }
-
-    pub fn remove(&mut self, peer_id: &PeerId) {
-        self.peer_addrs.remove(peer_id);
-    }
-
-    pub fn renegotiate(&mut self, peer_id: &PeerId) {
-        self.add_handler_event(peer_id);
-    }
-
-    fn add_handler_event(&mut self, peer_id: &PeerId) {
-        if let Some(conn_info) = self.peer_addrs.get(peer_id) {
-            let handler_event = IotaGossipHandlerInEvent {
-                peer_id: *peer_id,
-                peer_addr: conn_info.addr.clone(),
-                conn_origin: conn_info.origin.clone(),
-            };
-
-            let notify_handler = NetworkBehaviourAction::NotifyHandler {
-                peer_id: *peer_id,
-                handler: NotifyHandler::One(conn_info.id), // TODO: try also ::Any
-                event: handler_event,
-            };
-
-            self.events.push_back(notify_handler);
+            peers: HashMap::with_capacity(8),
         }
     }
 }
@@ -125,7 +100,7 @@ impl NetworkBehaviour for IotaGossipProtocol {
         self.num_handlers += 1;
         debug!("gossip protocol: new handler ({}).", self.num_handlers);
 
-        GossipProtocolHandler::new(self.num_inbounds, self.num_outbounds, self.info.clone())
+        GossipProtocolHandler::new(self.id.clone())
     }
 
     /// **libp2p docs**:
@@ -138,7 +113,7 @@ impl NetworkBehaviour for IotaGossipProtocol {
     /// address should be the most likely to be reachable.
     fn addresses_of_peer(&mut self, peer_id: &PeerId) -> Vec<Multiaddr> {
         let addrs = self
-            .peer_addrs
+            .peers
             .get(&peer_id)
             .map_or(Vec::new(), |conn_info| vec![conn_info.addr.clone()]);
 
@@ -165,14 +140,22 @@ impl NetworkBehaviour for IotaGossipProtocol {
             self.num_inbounds, self.num_outbounds
         );
 
-        let conn_info = ConnectionInfo {
-            id: *conn_id,
-            addr: peer_addr,
-            origin,
-        };
-        self.peer_addrs.insert(*peer_id, conn_info);
+        self.peers.insert(*peer_id, {
+            ConnectionInfo {
+                addr: peer_addr.clone(),
+                origin,
+            }
+        });
 
-        self.add_handler_event(peer_id);
+        let handler_event = IotaGossipHandlerInEvent { origin };
+
+        let notify_handler = NetworkBehaviourAction::NotifyHandler {
+            peer_id: *peer_id,
+            handler: NotifyHandler::One(*conn_id), // TODO: try also ::Any
+            event: handler_event,
+        };
+
+        self.events.push_back(notify_handler);
     }
 
     /// **libp2p docs**:
@@ -194,24 +177,26 @@ impl NetworkBehaviour for IotaGossipProtocol {
     ///
     /// The `peer_id` is guaranteed to be in a connected state. In other words, `inject_connected`
     /// has previously been called with this `PeerId`.
-    fn inject_event(&mut self, peer_id: PeerId, conn_id: ConnectionId, event: IotaGossipHandlerEvent) {
+    fn inject_event(&mut self, peer_id: PeerId, _: ConnectionId, event: IotaGossipHandlerEvent) {
         debug!("gossip protocol: handler event: {:?}", event);
 
+        // Propagate events to the behavior.
         let ev = match event {
             IotaGossipHandlerEvent::SentUpgradeRequest { to } => {
                 NetworkBehaviourAction::GenerateEvent(IotaGossipEvent::SentUpgradeRequest { to })
             }
-            IotaGossipHandlerEvent::UpgradeCompleted {
-                peer_id,
-                peer_addr,
-                conn_origin,
-                substream,
-            } => NetworkBehaviourAction::GenerateEvent(IotaGossipEvent::UpgradeCompleted {
-                peer_id,
-                peer_addr,
-                conn_origin,
-                substream,
-            }),
+            IotaGossipHandlerEvent::UpgradeCompleted { substream } => {
+                if let Some(conn_info) = self.peers.remove(&peer_id) {
+                    NetworkBehaviourAction::GenerateEvent(IotaGossipEvent::UpgradeCompleted {
+                        peer_id,
+                        peer_addr: conn_info.addr,
+                        conn_origin: conn_info.origin,
+                        substream,
+                    })
+                } else {
+                    return;
+                }
+            }
             IotaGossipHandlerEvent::UpgradeError { peer_id, error } => {
                 NetworkBehaviourAction::GenerateEvent(IotaGossipEvent::UpgradeError { peer_id, error })
             }

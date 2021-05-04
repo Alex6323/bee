@@ -8,14 +8,14 @@ use libp2p_core::ProtocolName;
 use std::fmt;
 
 #[derive(Debug, Clone)]
-pub struct IotaGossipInfo {
+pub struct IotaGossipIdentifier {
     name: String,
     network_id: u64,
     version: String,
     buffered: Vec<u8>,
 }
 
-impl IotaGossipInfo {
+impl IotaGossipIdentifier {
     pub fn new(name: String, network_id: u64, version: String) -> Self {
         let buffered = format!("/{}/{}/{}", name, network_id, version).into_bytes();
 
@@ -28,13 +28,13 @@ impl IotaGossipInfo {
     }
 }
 
-impl ProtocolName for IotaGossipInfo {
+impl ProtocolName for IotaGossipIdentifier {
     fn protocol_name(&self) -> &[u8] {
         &self.buffered
     }
 }
 
-impl fmt::Display for IotaGossipInfo {
+impl fmt::Display for IotaGossipIdentifier {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Panic:
         // Unwrapping is fine, because we made sure `buffered` contains a valid Utf8 string.
