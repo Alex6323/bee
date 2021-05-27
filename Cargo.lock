@@ -203,7 +203,7 @@ checksum = "6c7f7096bc256f5e5cb960f60dfc4f4ef979ca65abe7fb9d5a4f77150d3783d4"
 [[package]]
 name = "bee-common"
 version = "0.4.1"
-source = "git+https://github.com/iotaledger/bee.git?branch=dev#b1ce0f506c3a5ff2241b93fe1f451054aa2c6c3d"
+source = "git+https://github.com/alex6323/bee.git?branch=dev_pruning#c97c57bd60b6286390bcab6b58e5ac444f11f709"
 dependencies = [
  "autocfg",
  "chrono",
@@ -219,7 +219,7 @@ dependencies = [
 [[package]]
 name = "bee-crypto"
 version = "0.2.1-alpha"
-source = "git+https://github.com/iotaledger/bee.git?branch=dev#b1ce0f506c3a5ff2241b93fe1f451054aa2c6c3d"
+source = "git+https://github.com/alex6323/bee.git?branch=dev_pruning#c97c57bd60b6286390bcab6b58e5ac444f11f709"
 dependencies = [
  "bee-ternary",
  "byteorder",
@@ -231,7 +231,7 @@ dependencies = [
 [[package]]
 name = "bee-ledger"
 version = "0.3.1"
-source = "git+https://github.com/iotaledger/bee.git?branch=dev#b1ce0f506c3a5ff2241b93fe1f451054aa2c6c3d"
+source = "git+https://github.com/alex6323/bee.git?branch=dev_pruning#c97c57bd60b6286390bcab6b58e5ac444f11f709"
 dependencies = [
  "async-trait",
  "bee-common",
@@ -256,7 +256,7 @@ dependencies = [
 [[package]]
 name = "bee-message"
 version = "0.1.5"
-source = "git+https://github.com/iotaledger/bee.git?branch=dev#b1ce0f506c3a5ff2241b93fe1f451054aa2c6c3d"
+source = "git+https://github.com/alex6323/bee.git?branch=dev_pruning#c97c57bd60b6286390bcab6b58e5ac444f11f709"
 dependencies = [
  "bech32",
  "bee-common",
@@ -273,7 +273,7 @@ dependencies = [
 [[package]]
 name = "bee-network"
 version = "0.2.1"
-source = "git+https://github.com/iotaledger/bee.git?branch=dev#b1ce0f506c3a5ff2241b93fe1f451054aa2c6c3d"
+source = "git+https://github.com/alex6323/bee.git?branch=dev_pruning#c97c57bd60b6286390bcab6b58e5ac444f11f709"
 dependencies = [
  "async-trait",
  "bee-runtime",
@@ -338,7 +338,7 @@ dependencies = [
 [[package]]
 name = "bee-pow"
 version = "0.1.0"
-source = "git+https://github.com/iotaledger/bee.git?branch=dev#b1ce0f506c3a5ff2241b93fe1f451054aa2c6c3d"
+source = "git+https://github.com/alex6323/bee.git?branch=dev_pruning#c97c57bd60b6286390bcab6b58e5ac444f11f709"
 dependencies = [
  "bee-crypto",
  "bee-ternary",
@@ -411,7 +411,7 @@ dependencies = [
 [[package]]
 name = "bee-runtime"
 version = "0.1.1-alpha"
-source = "git+https://github.com/iotaledger/bee.git?branch=dev#b1ce0f506c3a5ff2241b93fe1f451054aa2c6c3d"
+source = "git+https://github.com/alex6323/bee.git?branch=dev_pruning#c97c57bd60b6286390bcab6b58e5ac444f11f709"
 dependencies = [
  "async-trait",
  "bee-storage",
@@ -423,7 +423,7 @@ dependencies = [
 [[package]]
 name = "bee-storage"
 version = "0.5.0"
-source = "git+https://github.com/iotaledger/bee.git?branch=dev#b1ce0f506c3a5ff2241b93fe1f451054aa2c6c3d"
+source = "git+https://github.com/alex6323/bee.git?branch=dev_pruning#c97c57bd60b6286390bcab6b58e5ac444f11f709"
 dependencies = [
  "async-trait",
  "bee-common",
@@ -435,7 +435,7 @@ dependencies = [
 [[package]]
 name = "bee-storage-rocksdb"
 version = "0.2.0"
-source = "git+https://github.com/iotaledger/bee.git?branch=dev#b1ce0f506c3a5ff2241b93fe1f451054aa2c6c3d"
+source = "git+https://github.com/alex6323/bee.git?branch=dev_pruning#c97c57bd60b6286390bcab6b58e5ac444f11f709"
 dependencies = [
  "async-trait",
  "bee-common",
@@ -454,7 +454,7 @@ dependencies = [
 [[package]]
 name = "bee-tangle"
 version = "0.1.2"
-source = "git+https://github.com/iotaledger/bee.git?branch=dev#b1ce0f506c3a5ff2241b93fe1f451054aa2c6c3d"
+source = "git+https://github.com/alex6323/bee.git?branch=dev_pruning#c97c57bd60b6286390bcab6b58e5ac444f11f709"
 dependencies = [
  "async-trait",
  "bee-common",
@@ -478,7 +478,7 @@ dependencies = [
 [[package]]
 name = "bee-ternary"
 version = "0.4.2-alpha"
-source = "git+https://github.com/iotaledger/bee.git?branch=dev#b1ce0f506c3a5ff2241b93fe1f451054aa2c6c3d"
+source = "git+https://github.com/alex6323/bee.git?branch=dev_pruning#c97c57bd60b6286390bcab6b58e5ac444f11f709"
 dependencies = [
  "autocfg",
  "num-traits",
