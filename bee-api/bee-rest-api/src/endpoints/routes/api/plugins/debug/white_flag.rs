@@ -39,8 +39,8 @@ fn path() -> impl Filter<Extract = (), Error = warp::Rejection> + Clone {
 
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn filter<B: StorageBackend>(
-    public_routes: Vec<String>,
-    allowed_ips: Vec<IpAddr>,
+    public_routes: Box<[String]>,
+    allowed_ips: Box<[IpAddr]>,
     storage: ResourceHandle<B>,
     tangle: ResourceHandle<MsTangle<B>>,
     bus: ResourceHandle<Bus<'static>>,
@@ -128,18 +128,16 @@ pub(crate) async fn white_flag<B: StorageBackend>(
     let sender = Arc::new(Mutex::new(Some(sender)));
 
     // Start listening to solidification events to check if the parents are getting solid.
-    let _to_solidify = to_solidify.clone();
-    let _sender = sender.clone();
+    let task_to_solidify = to_solidify.clone();
+    let task_sender = sender.clone();
     struct Static;
     bus.add_listener::<Static, _, _>(move |event: &MessageSolidified| {
-        if let Ok(mut to_solidify) = to_solidify.lock() {
+        if let Ok(mut to_solidify) = task_to_solidify.lock() {
             if to_solidify.remove(&event.message_id) && to_solidify.is_empty() {
-                let _ = sender.lock().map(|mut s| s.take().map(|s| s.send(())));
+                let _ = task_sender.lock().map(|mut s| s.take().map(|s| s.send(())));
             }
         }
     });
-    let to_solidify = _to_solidify;
-    let sender = _sender;
 
     for parent in parents.iter() {
         if tangle.is_solid_message(parent).await {

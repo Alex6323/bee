@@ -16,6 +16,7 @@ bee-crypto = { git = "https://github.com/alex6323/bee.git", branch = "dev_prunin
 bee-ledger = { git = "https://github.com/alex6323/bee.git", branch = "dev_pruning", features = [ "workers" ], optional = true }
 bee-message = { git = "https://github.com/alex6323/bee.git", branch = "dev_pruning", features = [ "serde" ] }
 bee-network = { git = "https://github.com/alex6323/bee.git", branch = "dev_pruning", features = [ "full" ] }
+bee-pow = { git = "https://github.com/alex6323/bee.git", branch = "dev_pruning" }
 bee-runtime = { git = "https://github.com/alex6323/bee.git", branch = "dev_pruning", optional = true }
 bee-storage = { git = "https://github.com/alex6323/bee.git", branch = "dev_pruning", optional = true }
 bee-tangle = { git = "https://github.com/alex6323/bee.git", branch = "dev_pruning", optional = true }

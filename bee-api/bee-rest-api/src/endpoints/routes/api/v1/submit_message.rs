@@ -32,8 +32,8 @@ fn path() -> impl Filter<Extract = (), Error = Rejection> + Clone {
 }
 
 pub(crate) fn filter<B: StorageBackend>(
-    public_routes: Vec<String>,
-    allowed_ips: Vec<IpAddr>,
+    public_routes: Box<[String]>,
+    allowed_ips: Box<[IpAddr]>,
     tangle: ResourceHandle<MsTangle<B>>,
     message_submitter: mpsc::UnboundedSender<MessageSubmitterWorkerEvent>,
     network_id: NetworkId,
@@ -98,7 +98,7 @@ pub(crate) async fn submit_message<B: StorageBackend>(
                 "invalid parents: expected an array of message ids".to_string(),
             ))
         })?;
-        let mut message_ids = Vec::new();
+        let mut message_ids = Vec::with_capacity(array.len());
         for s in array {
             let message_id = s
                 .as_str()
@@ -145,6 +145,25 @@ pub(crate) async fn submit_message<B: StorageBackend>(
         if parsed == 0 { None } else { Some(parsed) }
     };
 
+    let message = build_message(network_id, parents, payload, nonce, rest_api_config, protocol_config).await?;
+    let message_id = forward_to_message_submitter(message, tangle, message_submitter).await?;
+
+    Ok(warp::reply::with_status(
+        warp::reply::json(&SuccessBody::new(SubmitMessageResponse {
+            message_id: message_id.to_string(),
+        })),
+        StatusCode::CREATED,
+    ))
+}
+
+pub(crate) async fn build_message(
+    network_id: u64,
+    parents: Vec<MessageId>,
+    payload: Option<Payload>,
+    nonce: Option<u64>,
+    rest_api_config: RestApiConfig,
+    protocol_config: ProtocolConfig,
+) -> Result<Message, Rejection> {
     let message = if let Some(nonce) = nonce {
         let mut builder = MessageBuilder::new()
             .with_network_id(network_id)
@@ -180,15 +199,7 @@ pub(crate) async fn submit_message<B: StorageBackend>(
             .finish()
             .map_err(|e| reject::custom(CustomRejection::BadRequest(e.to_string())))?
     };
-
-    let message_id = forward_to_message_submitter(message, tangle, message_submitter).await?;
-
-    Ok(warp::reply::with_status(
-        warp::reply::json(&SuccessBody::new(SubmitMessageResponse {
-            message_id: message_id.to_string(),
-        })),
-        StatusCode::CREATED,
-    ))
+    Ok(message)
 }
 
 pub(crate) async fn forward_to_message_submitter<B: StorageBackend>(

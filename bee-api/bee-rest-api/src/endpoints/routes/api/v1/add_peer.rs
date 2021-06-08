@@ -29,8 +29,8 @@ fn path() -> impl Filter<Extract = (), Error = warp::Rejection> + Clone {
 }
 
 pub(crate) fn filter(
-    public_routes: Vec<String>,
-    allowed_ips: Vec<IpAddr>,
+    public_routes: Box<[String]>,
+    allowed_ips: Box<[IpAddr]>,
     peer_manager: ResourceHandle<PeerManager>,
     network_command_sender: ResourceHandle<NetworkCommandSender>,
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
@@ -61,13 +61,15 @@ pub(crate) async fn add_peer(
         .parse::<Multiaddr>()
         .map_err(|e| reject::custom(CustomRejection::BadRequest(format!("invalid multi address: {}", e))))?;
 
-    let peer_id = match multi_address.pop().unwrap() {
-        Protocol::P2p(multihash) => PeerId::from_multihash(multihash)
-            .map_err(|_| reject::custom(CustomRejection::BadRequest("invalid multi address".to_string())))?,
+    let peer_id = match multi_address.pop() {
+        Some(Protocol::P2p(multihash)) => PeerId::from_multihash(multihash).map_err(|_| {
+            reject::custom(CustomRejection::BadRequest(
+                "invalid multi address: can not parse peer id".to_string(),
+            ))
+        })?,
         _ => {
             return Err(reject::custom(CustomRejection::BadRequest(
-                "Invalid peer descriptor. The multi address did not have a valid peer id as its last segment."
-                    .to_string(),
+                "invalid multi address: invalid protocol type".to_string(),
             )));
         }
     };
