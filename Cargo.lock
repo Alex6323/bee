@@ -205,7 +205,7 @@ checksum = "cf9ff0bbfd639f15c74af777d81383cf53efb7c93613f6cab67c6c11e05bbf8b"
 [[package]]
 name = "bee-common"
 version = "0.4.1"
-source = "git+https://github.com/Alex6323/bee.git?branch=dev2#b9885330bc0c80ca2812b7082a8a11a81bf040b6"
+source = "git+https://github.com/Alex6323/bee.git?branch=dev2#7c3d2e60d1059c881c4288533e6521d8fb561202"
 dependencies = [
  "autocfg",
  "chrono",
@@ -221,7 +221,7 @@ dependencies = [
 [[package]]
 name = "bee-crypto"
 version = "0.2.1-alpha"
-source = "git+https://github.com/Alex6323/bee.git?branch=dev2#b9885330bc0c80ca2812b7082a8a11a81bf040b6"
+source = "git+https://github.com/Alex6323/bee.git?branch=dev2#7c3d2e60d1059c881c4288533e6521d8fb561202"
 dependencies = [
  "bee-ternary",
  "byteorder",
@@ -233,7 +233,7 @@ dependencies = [
 [[package]]
 name = "bee-ledger"
 version = "0.4.0"
-source = "git+https://github.com/Alex6323/bee.git?branch=dev2#b9885330bc0c80ca2812b7082a8a11a81bf040b6"
+source = "git+https://github.com/Alex6323/bee.git?branch=dev2#7c3d2e60d1059c881c4288533e6521d8fb561202"
 dependencies = [
  "async-trait",
  "bee-common",
@@ -260,7 +260,7 @@ dependencies = [
 [[package]]
 name = "bee-message"
 version = "0.1.5"
-source = "git+https://github.com/Alex6323/bee.git?branch=dev2#b9885330bc0c80ca2812b7082a8a11a81bf040b6"
+source = "git+https://github.com/Alex6323/bee.git?branch=dev2#7c3d2e60d1059c881c4288533e6521d8fb561202"
 dependencies = [
  "bech32",
  "bee-common",
@@ -277,7 +277,7 @@ dependencies = [
 [[package]]
 name = "bee-network"
 version = "0.2.1"
-source = "git+https://github.com/Alex6323/bee.git?branch=dev2#b9885330bc0c80ca2812b7082a8a11a81bf040b6"
+source = "git+https://github.com/Alex6323/bee.git?branch=dev2#7c3d2e60d1059c881c4288533e6521d8fb561202"
 dependencies = [
  "async-trait",
  "bee-runtime",
@@ -344,7 +344,7 @@ dependencies = [
 [[package]]
 name = "bee-pow"
 version = "0.1.0"
-source = "git+https://github.com/Alex6323/bee.git?branch=dev2#b9885330bc0c80ca2812b7082a8a11a81bf040b6"
+source = "git+https://github.com/Alex6323/bee.git?branch=dev2#7c3d2e60d1059c881c4288533e6521d8fb561202"
 dependencies = [
  "bee-crypto",
  "bee-ternary",
@@ -419,7 +419,7 @@ dependencies = [
 [[package]]
 name = "bee-runtime"
 version = "0.1.1-alpha"
-source = "git+https://github.com/Alex6323/bee.git?branch=dev2#b9885330bc0c80ca2812b7082a8a11a81bf040b6"
+source = "git+https://github.com/Alex6323/bee.git?branch=dev2#7c3d2e60d1059c881c4288533e6521d8fb561202"
 dependencies = [
  "async-trait",
  "bee-storage",
@@ -431,7 +431,7 @@ dependencies = [
 [[package]]
 name = "bee-storage"
 version = "0.9.0"
-source = "git+https://github.com/Alex6323/bee.git?branch=dev2#b9885330bc0c80ca2812b7082a8a11a81bf040b6"
+source = "git+https://github.com/Alex6323/bee.git?branch=dev2#7c3d2e60d1059c881c4288533e6521d8fb561202"
 dependencies = [
  "bee-common",
  "serde",
@@ -441,7 +441,7 @@ dependencies = [
 [[package]]
 name = "bee-storage-rocksdb"
 version = "0.5.0"
-source = "git+https://github.com/Alex6323/bee.git?branch=dev2#b9885330bc0c80ca2812b7082a8a11a81bf040b6"
+source = "git+https://github.com/Alex6323/bee.git?branch=dev2#7c3d2e60d1059c881c4288533e6521d8fb561202"
 dependencies = [
  "bee-common",
  "bee-ledger",
@@ -457,7 +457,7 @@ dependencies = [
 [[package]]
 name = "bee-storage-sled"
 version = "0.4.0"
-source = "git+https://github.com/Alex6323/bee.git?branch=dev2#b9885330bc0c80ca2812b7082a8a11a81bf040b6"
+source = "git+https://github.com/Alex6323/bee.git?branch=dev2#7c3d2e60d1059c881c4288533e6521d8fb561202"
 dependencies = [
  "bee-common",
  "bee-ledger",
@@ -473,7 +473,7 @@ dependencies = [
 [[package]]
 name = "bee-tangle"
 version = "0.1.2"
-source = "git+https://github.com/Alex6323/bee.git?branch=dev2#b9885330bc0c80ca2812b7082a8a11a81bf040b6"
+source = "git+https://github.com/Alex6323/bee.git?branch=dev2#7c3d2e60d1059c881c4288533e6521d8fb561202"
 dependencies = [
  "async-trait",
  "bee-common",
@@ -497,7 +497,7 @@ dependencies = [
 [[package]]
 name = "bee-ternary"
 version = "0.4.2-alpha"
-source = "git+https://github.com/Alex6323/bee.git?branch=dev2#b9885330bc0c80ca2812b7082a8a11a81bf040b6"
+source = "git+https://github.com/Alex6323/bee.git?branch=dev2#7c3d2e60d1059c881c4288533e6521d8fb561202"
 dependencies = [
  "autocfg",
  "num-traits",
@@ -770,7 +770,7 @@ dependencies = [
 [[package]]
 name = "console-api"
 version = "0.1.0"
-source = "git+https://github.com/tokio-rs/console.git?branch=main#5142a608a33fc3736e93a7ad93633d835ee11dfc"
+source = "git+https://github.com/tokio-rs/console.git?branch=main#5568bf6cdfd22af57b5dd6d0ef283466ec77058c"
 dependencies = [
  "prost",
  "prost-types",
@@ -782,7 +782,7 @@ dependencies = [
 [[package]]
 name = "console-subscriber"
 version = "0.1.0"
-source = "git+https://github.com/tokio-rs/console.git?branch=main#5142a608a33fc3736e93a7ad93633d835ee11dfc"
+source = "git+https://github.com/tokio-rs/console.git?branch=main#5568bf6cdfd22af57b5dd6d0ef283466ec77058c"
 dependencies = [
  "console-api",
  "futures",
@@ -1332,9 +1332,9 @@ dependencies = [
 
 [[package]]
 name = "hermit-abi"
-version = "0.1.18"
+version = "0.1.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "322f4de77956e22ed0e5032c359a0f1273f1f7f0d79bfa3b8ffbc730d7fbcc5c"
+checksum = "62b467343b94ba476dcb2500d242dadbb39557df889310ac77c5d99100aaac33"
 dependencies = [
  "libc",
 ]
@@ -2309,9 +2309,9 @@ dependencies = [
 
 [[package]]
 name = "pin-project-lite"
-version = "0.2.6"
+version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc0e1f259c92177c30a4c9d177246edd0a3568b25756a977d0632cf8fa37e905"
+checksum = "8d31d11c69a6b52a174b42bdc0c30e5e11670f90788b2c471c31c1d17d449443"
 
 [[package]]
 name = "pin-utils"
@@ -3465,9 +3465,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-subscriber"
-version = "0.2.18"
+version = "0.2.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa5553bf0883ba7c9cbe493b085c29926bd41b66afc31ff72cf17ff4fb60dcd5"
+checksum = "ab69019741fca4d98be3c62d2b75254528b5432233fd8a4d2739fec20278de48"
 dependencies = [
  "ansi_term",
  "chrono",
