@@ -97,12 +97,13 @@ async fn update_past_cone<B: StorageBackend>(
     mut parents: Vec<MessageId>,
     index: MilestoneIndex,
 ) -> HashSet<MessageId> {
-    let mut updated = HashSet::new();
+    let mut visited = HashSet::with_capacity(512);
+    let mut updated = HashSet::with_capacity(512);
     let seps = tangle.get_solid_entry_points().await;
 
     while let Some(current_id) = parents.pop() {
         // Skip if we already updated it.
-        if updated.contains(&current_id) {
+        if visited.contains(&current_id) {
             continue;
         }
 
@@ -112,23 +113,26 @@ async fn update_past_cone<B: StorageBackend>(
             continue;
         }
 
+        visited.insert(current_id);
+
+        if let Some(current_md) = tangle.get_metadata(&current_id).await {
+            if current_md.milestone_index().is_some() {
+                continue;
+            }
+        } else {
+            log::error!("Missing metadata for {}", current_id);
+        }
+
         tangle
             .update_metadata(&current_id, |metadata| {
-                if metadata.milestone_index().is_none() {
-                    metadata.set_milestone_index(index);
-                    // TODO: That was fine in a synchronous scenario, where this algo had the newest information,
-                    // but probably isn't the case in the now asynchronous scenario. Investigate!
-                    metadata.set_omrsi(IndexId::new(index, current_id));
-                    metadata.set_ymrsi(IndexId::new(index, current_id));
-                }
+                metadata.set_milestone_index(index);
+                // TODO: That was fine in a synchronous scenario, where this algo had the newest information,
+                // but probably isn't the case in the now asynchronous scenario. Investigate!
+                metadata.set_omrsi(IndexId::new(index, current_id));
+                metadata.set_ymrsi(IndexId::new(index, current_id));
             })
             .await;
 
-        // Preferably we would only collect the 'root messages/transactions'. They are defined as being confirmed by
-        // a milestone, but at least one of their children is not confirmed yet. One can think of them as an attachment
-        // point for new messages to the main tangle. It is ensured however, that this set *contains* the root messages
-        // as well, and during the future walk we will skip already confirmed children, which shouldn't be a performance
-        // issue.
         updated.insert(current_id);
 
         if let Some(current_msg) = tangle.get(&current_id).await {
