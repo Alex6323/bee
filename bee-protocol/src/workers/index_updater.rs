@@ -8,11 +8,12 @@ use bee_message::{
     MessageId,
 };
 use bee_runtime::{node::Node, shutdown_stream::ShutdownStream, worker::Worker};
-use bee_tangle::{metadata::IndexId, MsTangle, TangleWorker};
+use bee_tangle::{metadata::IndexId, solid_entry_point::SolidEntryPoint, MsTangle, TangleWorker};
 
 use async_trait::async_trait;
 use futures::{future::FutureExt, stream::StreamExt};
 use log::{debug, info};
+use ref_cast::RefCast;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
@@ -97,46 +98,42 @@ async fn update_past_cone<B: StorageBackend>(
     index: MilestoneIndex,
 ) -> HashSet<MessageId> {
     let mut updated = HashSet::new();
+    let seps = tangle.get_solid_entry_points().await;
 
-    while let Some(parent_id) = parents.pop() {
-        // Our skip conditions:
-        // 1) check if we already updated it during this run
-        // 2) check if it's a SEP
-        // 3) check if we already updated it during a previous run
-        // Note that the order of calls is important (from cheap to more expensive) for performance reasons.
-        if updated.contains(&parent_id)
-            || tangle.is_solid_entry_point(&parent_id).await
-            || tangle
-                .get_metadata(&parent_id)
-                .await
-                // TODO: I don't think unwrapping here is safe. Investigate!
-                .unwrap()
-                .milestone_index()
-                .is_some()
-        {
+    while let Some(current_id) = parents.pop() {
+        // Skip if we already updated it.
+        if updated.contains(&current_id) {
+            continue;
+        }
+
+        // Skip if it's an SEP.
+        let is_sep = seps.contains_key(SolidEntryPoint::ref_cast(&current_id));
+        if is_sep {
             continue;
         }
 
         tangle
-            .update_metadata(&parent_id, |metadata| {
-                metadata.set_milestone_index(index);
-                // TODO: That was fine in a synchronous scenario, where this algo had the newest information,
-                // but probably isn't the case in the now asynchronous scenario. Investigate!
-                metadata.set_omrsi(IndexId::new(index, parent_id));
-                metadata.set_ymrsi(IndexId::new(index, parent_id));
+            .update_metadata(&current_id, |metadata| {
+                if metadata.milestone_index().is_none() {
+                    metadata.set_milestone_index(index);
+                    // TODO: That was fine in a synchronous scenario, where this algo had the newest information,
+                    // but probably isn't the case in the now asynchronous scenario. Investigate!
+                    metadata.set_omrsi(IndexId::new(index, current_id));
+                    metadata.set_ymrsi(IndexId::new(index, current_id));
+                }
             })
             .await;
-
-        if let Some(parent) = tangle.get(&parent_id).await {
-            parents.extend_from_slice(parent.parents())
-        }
 
         // Preferably we would only collect the 'root messages/transactions'. They are defined as being confirmed by
         // a milestone, but at least one of their children is not confirmed yet. One can think of them as an attachment
         // point for new messages to the main tangle. It is ensured however, that this set *contains* the root messages
         // as well, and during the future walk we will skip already confirmed children, which shouldn't be a performance
         // issue.
-        updated.insert(parent_id);
+        updated.insert(current_id);
+
+        if let Some(current_msg) = tangle.get(&current_id).await {
+            parents.extend_from_slice(current_msg.parents())
+        }
     }
 
     debug!("Set milestone index {} to {} messages.", index, updated.len());
