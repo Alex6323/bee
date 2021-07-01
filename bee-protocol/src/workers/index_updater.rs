@@ -130,6 +130,8 @@ async fn update_past_cone<B: StorageBackend>(
                 // but probably isn't the case in the now asynchronous scenario. Investigate!
                 metadata.set_omrsi(IndexId::new(index, current_id));
                 metadata.set_ymrsi(IndexId::new(index, current_id));
+
+                log::trace!("Setting milestone index for {} to {}", current_id, index);
             })
             .await;
 

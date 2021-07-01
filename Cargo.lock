@@ -205,7 +205,7 @@ checksum = "cf9ff0bbfd639f15c74af777d81383cf53efb7c93613f6cab67c6c11e05bbf8b"
 [[package]]
 name = "bee-common"
 version = "0.4.1"
-source = "git+https://github.com/Alex6323/bee.git?branch=dev2#596e2e56f415c3174e7bb94a3521c6903d25fead"
+source = "git+https://github.com/Alex6323/bee.git?branch=dev2#9284949ce7836073b7eeb9509a83ef46f2ab395d"
 dependencies = [
  "autocfg",
  "chrono",
@@ -221,7 +221,7 @@ dependencies = [
 [[package]]
 name = "bee-crypto"
 version = "0.2.1-alpha"
-source = "git+https://github.com/Alex6323/bee.git?branch=dev2#596e2e56f415c3174e7bb94a3521c6903d25fead"
+source = "git+https://github.com/Alex6323/bee.git?branch=dev2#9284949ce7836073b7eeb9509a83ef46f2ab395d"
 dependencies = [
  "bee-ternary",
  "byteorder",
@@ -233,7 +233,7 @@ dependencies = [
 [[package]]
 name = "bee-ledger"
 version = "0.4.0"
-source = "git+https://github.com/Alex6323/bee.git?branch=dev2#596e2e56f415c3174e7bb94a3521c6903d25fead"
+source = "git+https://github.com/Alex6323/bee.git?branch=dev2#9284949ce7836073b7eeb9509a83ef46f2ab395d"
 dependencies = [
  "async-trait",
  "bee-common",
@@ -260,7 +260,7 @@ dependencies = [
 [[package]]
 name = "bee-message"
 version = "0.1.5"
-source = "git+https://github.com/Alex6323/bee.git?branch=dev2#596e2e56f415c3174e7bb94a3521c6903d25fead"
+source = "git+https://github.com/Alex6323/bee.git?branch=dev2#9284949ce7836073b7eeb9509a83ef46f2ab395d"
 dependencies = [
  "bech32",
  "bee-common",
@@ -277,7 +277,7 @@ dependencies = [
 [[package]]
 name = "bee-network"
 version = "0.2.1"
-source = "git+https://github.com/Alex6323/bee.git?branch=dev2#596e2e56f415c3174e7bb94a3521c6903d25fead"
+source = "git+https://github.com/Alex6323/bee.git?branch=dev2#9284949ce7836073b7eeb9509a83ef46f2ab395d"
 dependencies = [
  "async-trait",
  "bee-runtime",
@@ -344,7 +344,7 @@ dependencies = [
 [[package]]
 name = "bee-pow"
 version = "0.1.0"
-source = "git+https://github.com/Alex6323/bee.git?branch=dev2#596e2e56f415c3174e7bb94a3521c6903d25fead"
+source = "git+https://github.com/Alex6323/bee.git?branch=dev2#9284949ce7836073b7eeb9509a83ef46f2ab395d"
 dependencies = [
  "bee-crypto",
  "bee-ternary",
@@ -419,7 +419,7 @@ dependencies = [
 [[package]]
 name = "bee-runtime"
 version = "0.1.1-alpha"
-source = "git+https://github.com/Alex6323/bee.git?branch=dev2#596e2e56f415c3174e7bb94a3521c6903d25fead"
+source = "git+https://github.com/Alex6323/bee.git?branch=dev2#9284949ce7836073b7eeb9509a83ef46f2ab395d"
 dependencies = [
  "async-trait",
  "bee-storage",
@@ -431,7 +431,7 @@ dependencies = [
 [[package]]
 name = "bee-storage"
 version = "0.9.0"
-source = "git+https://github.com/Alex6323/bee.git?branch=dev2#596e2e56f415c3174e7bb94a3521c6903d25fead"
+source = "git+https://github.com/Alex6323/bee.git?branch=dev2#9284949ce7836073b7eeb9509a83ef46f2ab395d"
 dependencies = [
  "bee-common",
  "serde",
@@ -441,7 +441,7 @@ dependencies = [
 [[package]]
 name = "bee-storage-rocksdb"
 version = "0.5.0"
-source = "git+https://github.com/Alex6323/bee.git?branch=dev2#596e2e56f415c3174e7bb94a3521c6903d25fead"
+source = "git+https://github.com/Alex6323/bee.git?branch=dev2#9284949ce7836073b7eeb9509a83ef46f2ab395d"
 dependencies = [
  "bee-common",
  "bee-ledger",
@@ -457,7 +457,7 @@ dependencies = [
 [[package]]
 name = "bee-storage-sled"
 version = "0.4.0"
-source = "git+https://github.com/Alex6323/bee.git?branch=dev2#596e2e56f415c3174e7bb94a3521c6903d25fead"
+source = "git+https://github.com/Alex6323/bee.git?branch=dev2#9284949ce7836073b7eeb9509a83ef46f2ab395d"
 dependencies = [
  "bee-common",
  "bee-ledger",
@@ -473,7 +473,7 @@ dependencies = [
 [[package]]
 name = "bee-tangle"
 version = "0.1.2"
-source = "git+https://github.com/Alex6323/bee.git?branch=dev2#596e2e56f415c3174e7bb94a3521c6903d25fead"
+source = "git+https://github.com/Alex6323/bee.git?branch=dev2#9284949ce7836073b7eeb9509a83ef46f2ab395d"
 dependencies = [
  "async-trait",
  "bee-common",
@@ -497,7 +497,7 @@ dependencies = [
 [[package]]
 name = "bee-ternary"
 version = "0.4.2-alpha"
-source = "git+https://github.com/Alex6323/bee.git?branch=dev2#596e2e56f415c3174e7bb94a3521c6903d25fead"
+source = "git+https://github.com/Alex6323/bee.git?branch=dev2#9284949ce7836073b7eeb9509a83ef46f2ab395d"
 dependencies = [
  "autocfg",
  "num-traits",
