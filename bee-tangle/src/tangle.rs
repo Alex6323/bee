@@ -6,7 +6,7 @@ use crate::{vertex::Vertex, MessageRef};
 use bee_message::{Message, MessageId};
 
 use hashbrown::{hash_map::DefaultHashBuilder, HashMap};
-use log::info;
+use log::{debug, info};
 use lru::LruCache;
 use tokio::sync::{Mutex, RwLock as TRwLock, RwLockWriteGuard as TRwLockWriteGuard};
 
@@ -282,8 +282,10 @@ where
         Update: FnOnce(&mut T) -> R,
     {
         let exists = self.pull_message(message_id, true).await;
+        debug!("{} exists {}", message_id, exists);
         let mut vertices = self.vertices.write().await;
         if let Some(vertex) = vertices.get_mut(message_id) {
+            debug!("{} Some", message_id);
             // If we previously blocked eviction, allow it again
             if exists {
                 vertex.allow_eviction();
@@ -292,6 +294,7 @@ where
             let r = vertex.metadata_mut().map(|m| update(m));
 
             if let Some((msg, meta)) = vertex.message_and_metadata() {
+                debug!("{} Some Some", message_id);
                 let (msg, meta) = ((&**msg).clone(), meta.clone());
 
                 // Insert cache queue entry to track eviction priority
@@ -302,10 +305,13 @@ where
                 self.hooks
                     .insert(*message_id, msg, meta)
                     .unwrap_or_else(|e| info!("Failed to update metadata for message {:?}", e));
+            } else {
+                debug!("{} Some None", message_id);
             }
 
             r
         } else {
+            debug!("{} None", message_id);
             None
         }
     }
